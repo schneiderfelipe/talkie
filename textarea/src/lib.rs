@@ -7,14 +7,14 @@ use std::{
 use anyhow::{Error, Result};
 use rustyline::Editor;
 
-pub struct Input<T> {
+pub struct Textarea<T> {
     editor: Editor<()>,
     prompt: String,
     phantom: PhantomData<T>,
 }
 
-impl<T> Input<T> {
-    /// Create a new [`Input`] object.
+impl<T> Textarea<T> {
+    /// Create a new [`Textarea`] object.
     ///
     /// # Errors
     ///
