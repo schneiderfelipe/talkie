@@ -14,8 +14,9 @@ anyhow = { version = "1.0.68", default-features = false }
 rustyline = { version = "10.0.0", default-features = false }
 
 [features]
-default = ["multiline"]
+default = ["multiline", "std"]
 multiline = ["rustyline/custom-bindings"]
+std = ["anyhow/std"]
 
 [package.metadata.workspaces]
 independent = true
