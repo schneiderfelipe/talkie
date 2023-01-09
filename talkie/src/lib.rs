@@ -1,7 +1,11 @@
-use std::marker::PhantomData;
+use std::{
+    fmt::{Debug, Display},
+    marker::PhantomData,
+    str::FromStr,
+};
 
-use rustyline::{error::ReadlineError, Editor};
-use thiserror::Error;
+use anyhow::{Error, Result};
+use rustyline::Editor;
 
 pub struct Input<T> {
     editor: Editor<()>,
@@ -9,16 +13,16 @@ pub struct Input<T> {
     phantom: PhantomData<T>,
 }
 
-impl<T: Text> Input<T> {
+impl<T> Input<T> {
     /// Create a new [`Input`] object.
     ///
     /// # Errors
     ///
     /// This function returns an error if [`rustyline::Editor::new`]
     /// returns one.
-    pub fn new() -> Result<Self, InputError> {
+    pub fn new() -> Result<Self> {
         Ok(Self {
-            editor: Editor::new()?,
+            editor: Editor::new().map_err(Error::msg)?,
             prompt: String::new(),
             phantom: PhantomData,
         })
@@ -28,42 +32,16 @@ impl<T: Text> Input<T> {
     ///
     /// # Errors
     ///
-    /// This function returns an error if either [`rustyline::Editor::readline`] or [`Text::from_text`]
+    /// This function returns an error if either [`rustyline::Editor::readline`] or [`FromStr::from_str`]
     /// returns one.
-    pub fn interact_text(&mut self) -> Result<T, InputError> {
-        let line = self.editor.readline(&self.prompt)?;
-        Ok(T::from_text(line)?)
-    }
-}
-
-#[derive(Debug, Error)]
-pub enum InputError {
-    #[error("readline error {0}")]
-    Readline(#[from] ReadlineError),
-    #[error("text error {0}")]
-    Text(#[from] TextError),
-}
-
-#[derive(Debug, Error)]
-#[error("got {text}, found {message}")]
-pub struct TextError {
-    text: String,
-    message: String,
-}
-
-pub trait Text: Sized {
-    /// Transform a [`String`] value into [`Self`].
-    ///
-    /// # Errors
-    ///
-    /// This function should return an error if it is not possible
-    /// to produce a value from the [`String`].
-    fn from_text(s: String) -> Result<Self, TextError>;
-}
-
-impl Text for String {
-    fn from_text(s: String) -> Result<Self, TextError> {
-        Ok(s)
+    pub fn interact_text(&mut self) -> Result<T>
+    where
+        T: FromStr,
+        T::Err: Debug + Display + Send + Sync + 'static,
+    {
+        let line = self.editor.readline(&self.prompt).map_err(Error::msg)?;
+        let value = line.parse().map_err(Error::msg)?;
+        Ok(value)
     }
 }
 

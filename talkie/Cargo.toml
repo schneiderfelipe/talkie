@@ -4,5 +4,5 @@ version = "0.0.0"
 edition = "2021"
 
 [dependencies]
+anyhow = { version = "1.0.68", default-features = false }
 rustyline = { version = "10.0.0", default-features = false }
-thiserror = { version = "1.0.38", default-features = false }
