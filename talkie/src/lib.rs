@@ -13,7 +13,7 @@ impl<T: Text> Input<T> {
     pub fn new() -> Result<Self, InputError> {
         Ok(Self {
             editor: Editor::new()?,
-            prompt: "".into(),
+            prompt: String::new(),
             phantom: PhantomData,
         })
     }
