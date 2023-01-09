@@ -3,6 +3,12 @@ name = "textarea"
 version = "0.0.0"
 edition = "2021"
 
+authors = ["Felipe S. S. Schneider <schneider.felipe.5@gmail.com>"]
+description = "A textarea for the command-line, with multiline support"
+homepage = "https://github.com/schneiderfelipe/talkie/tree/main/textarea#textarea"
+repository = "https://github.com/schneiderfelipe/talkie"
+license = "MIT"
+
 [dependencies]
 anyhow = { version = "1.0.68", default-features = false }
 rustyline = { version = "10.0.0", default-features = false }
