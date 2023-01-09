@@ -1,14 +1,57 @@
-pub fn add(left: usize, right: usize) -> usize {
-    left + right
+use std::marker::PhantomData;
+
+use rustyline::{error::ReadlineError, Editor};
+use thiserror::Error;
+
+pub struct Input<T> {
+    editor: Editor<()>,
+    prompt: String,
+    phantom: PhantomData<T>,
+}
+
+impl<T: Text> Input<T> {
+    pub fn new() -> Result<Self, InputError> {
+        Ok(Self {
+            editor: Editor::new()?,
+            prompt: "".into(),
+            phantom: PhantomData,
+        })
+    }
+
+    pub fn interact_text(&mut self) -> Result<T, InputError> {
+        let line = self.editor.readline(&self.prompt)?;
+        Ok(T::from_text(line)?)
+    }
+}
+
+#[derive(Debug, Error)]
+pub enum InputError {
+    #[error("readline error {0}")]
+    Readline(#[from] ReadlineError),
+    #[error("text error {0}")]
+    Text(#[from] TextError),
+}
+
+#[derive(Debug, Error)]
+#[error("got {text}, found {message}")]
+pub struct TextError {
+    text: String,
+    message: String,
+}
+
+pub trait Text: Sized {
+    fn from_text(s: String) -> Result<Self, TextError>;
+}
+
+impl Text for String {
+    fn from_text(s: String) -> Result<Self, TextError> {
+        Ok(s)
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
 
     #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
+    fn it_works() {}
 }
