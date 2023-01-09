@@ -1,3 +1,5 @@
+//! A textarea for the command-line, with multiline support.
+
 use std::{
     fmt::{Debug, Display},
     marker::PhantomData,
