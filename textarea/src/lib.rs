@@ -33,6 +33,11 @@ impl<T> Textarea<T> {
         })
     }
 
+    pub fn with_prompt<S: Into<String>>(&mut self, prompt: S) -> &mut Self {
+        self.prompt = prompt.into();
+        self
+    }
+
     /// Interact with the user.
     ///
     /// # Errors
