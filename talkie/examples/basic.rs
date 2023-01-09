@@ -1,6 +1,8 @@
+use anyhow::Result;
 use talkie::Input;
 
-fn main() {
-    let input: String = Input::new().unwrap().interact_text().unwrap();
+fn main() -> Result<()> {
+    let input: String = Input::new()?.interact_text()?;
     println!("{input}");
+    Ok(())
 }
