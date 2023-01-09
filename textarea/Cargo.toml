@@ -10,3 +10,6 @@ rustyline = { version = "10.0.0", default-features = false }
 [features]
 default = ["multiline"]
 multiline = ["rustyline/custom-bindings"]
+
+[package.metadata.workspaces]
+independent = true
