@@ -1,0 +1,19 @@
+[package]
+name = "universal-tagger"
+version = "0.0.0"
+edition = "2021"
+
+authors = ["Felipe S. S. Schneider <schneider.felipe.5@gmail.com>"]
+description = "A language-agnostic natural-language tagger written in Rust"
+homepage = "https://github.com/schneiderfelipe/talkie/tree/main/universal-tagger#universal-tagger"
+repository = "https://github.com/schneiderfelipe/talkie"
+license = "MIT"
+
+[dependencies]
+unicode-segmentation = { version = "1.10.0", default-features = false }
+
+[dev-dependencies]
+textarea = { path = "../textarea" }
+
+[package.metadata.workspaces]
+independent = true
