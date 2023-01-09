@@ -10,6 +10,12 @@ pub struct Input<T> {
 }
 
 impl<T: Text> Input<T> {
+    /// Create a new [`Input`] object.
+    ///
+    /// # Errors
+    ///
+    /// This function returns an error if [`rustyline::Editor::new`]
+    /// returns one.
     pub fn new() -> Result<Self, InputError> {
         Ok(Self {
             editor: Editor::new()?,
@@ -18,6 +24,12 @@ impl<T: Text> Input<T> {
         })
     }
 
+    /// Interact with the user.
+    ///
+    /// # Errors
+    ///
+    /// This function returns an error if either [`rustyline::Editor::readline`] or [`Text::from_text`]
+    /// returns one.
     pub fn interact_text(&mut self) -> Result<T, InputError> {
         let line = self.editor.readline(&self.prompt)?;
         Ok(T::from_text(line)?)
@@ -40,6 +52,12 @@ pub struct TextError {
 }
 
 pub trait Text: Sized {
+    /// Transform a [`String`] value into [`Self`].
+    ///
+    /// # Errors
+    ///
+    /// This function should return an error if it is not possible
+    /// to produce a value from the [`String`].
     fn from_text(s: String) -> Result<Self, TextError>;
 }
 
