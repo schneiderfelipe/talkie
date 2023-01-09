@@ -5,7 +5,7 @@ use std::{
 };
 
 use anyhow::{Error, Result};
-use rustyline::Editor;
+use rustyline::{Cmd, Editor, KeyEvent};
 
 pub struct Textarea<T> {
     editor: Editor<()>,
@@ -21,8 +21,13 @@ impl<T> Textarea<T> {
     /// This function returns an error if [`rustyline::Editor::new`]
     /// returns one.
     pub fn new() -> Result<Self> {
+        let mut editor = Editor::new().map_err(Error::msg)?;
+
+        #[cfg(feature = "multiline")]
+        editor.bind_sequence(KeyEvent::alt('\r'), Cmd::Newline);
+
         Ok(Self {
-            editor: Editor::new().map_err(Error::msg)?,
+            editor,
             prompt: String::new(),
             phantom: PhantomData,
         })
