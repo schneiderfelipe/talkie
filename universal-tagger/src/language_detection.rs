@@ -118,6 +118,10 @@ mod tests {
         let text = "Ĉu vi ne volas eklerni Esperanton? Bonvolu! Estas unu de la plej bonaj aferoj!";
         let lang = detect_language(text).unwrap();
         assert_eq!(lang, Language::Epo);
+
+        let text = "There is no reason not to learn Esperanto.";
+        let lang = detect_language(text).unwrap();
+        assert_eq!(lang, Language::Eng);
     }
 
     #[test]
