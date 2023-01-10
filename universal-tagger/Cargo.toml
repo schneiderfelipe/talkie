@@ -11,6 +11,7 @@ license = "MIT"
 
 [dependencies]
 unicode-segmentation = { version = "1.10.0", default-features = false }
+whatlang = { version = "0.16.2", default-features = false }
 
 [dev-dependencies]
 textarea = { path = "../textarea" }
