@@ -1,5 +1,6 @@
 use std::collections::BTreeSet;
 
+use log::debug;
 use strum::EnumIter;
 
 /// Language codes following the [ISO 639-3](https://en.wikipedia.org/wiki/ISO_639-3) standard.
@@ -94,6 +95,7 @@ impl TryFrom<whatlang::Lang> for Lang {
 }
 
 /// Language detector.
+#[derive(Debug)]
 struct Detector {
     langs: BTreeSet<Lang>,
 }
@@ -137,6 +139,7 @@ impl Detector {
         let detector = whatlang::Detector::with_allowlist(allowlist);
 
         let info = detector.detect(text)?;
+        debug!("whatlang information: {info:#?}");
         if info.is_reliable() {
             info.lang().try_into().ok()
         } else {
