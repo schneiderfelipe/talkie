@@ -8,41 +8,59 @@ use strum::EnumIter;
 #[derive(Clone, Copy, Debug, EnumIter, PartialEq, Eq, PartialOrd, Ord)]
 enum Lang {
     /// العربية (Arabic).
+    #[cfg(feature = "arabic")]
     Ara,
     /// বাংলা (Bengali).
+    #[cfg(feature = "bengali")]
     Ben,
     /// 普通话 (Mandarin).
+    #[cfg(feature = "mandarin")]
     Cmn,
     /// Deutsch (German).
+    #[cfg(feature = "german")]
     Deu,
     /// English (English).
+    #[cfg(feature = "english")]
     Eng,
     /// Esperanto (Esperanto).
+    #[cfg(feature = "esperanto")]
     Epo,
     /// Français (French).
+    #[cfg(feature = "french")]
     Fra,
     /// हिन्दी (Hindi).
+    #[cfg(feature = "hindi")]
     Hin,
     /// Bahasa Indonesia (Indonesian).
+    #[cfg(feature = "indonesian")]
     Ind,
     /// Italiano (Italian).
+    #[cfg(feature = "italian")]
     Ita,
     /// 日本語 (Japanese).
+    #[cfg(feature = "japanese")]
     Jpn,
     /// ਪੰਜਾਬੀ (Punjabi).
+    #[cfg(feature = "punjabi")]
     Pan,
     /// Português (Portuguese).
+    #[cfg(feature = "portuguese")]
     Por,
     /// Русский (Russian).
+    #[cfg(feature = "russian")]
     Rus,
     /// Español (Spanish).
+    #[cfg(feature = "spanish")]
     Spa,
     /// Türkçe (Turkish).
+    #[cfg(feature = "turkish")]
     Tur,
     /// اُردُو (Urdu).
+    #[cfg(feature = "urdu")]
     Urd,
 }
 
+#[cfg(feature = "whatlang")]
 impl From<Lang> for whatlang::Lang {
     fn from(lang: Lang) -> Self {
         match lang {
@@ -67,6 +85,32 @@ impl From<Lang> for whatlang::Lang {
     }
 }
 
+#[cfg(feature = "lingua")]
+impl From<Lang> for lingua::Language {
+    fn from(lang: Lang) -> Self {
+        match lang {
+            Lang::Ara => Self::Arabic,
+            Lang::Ben => Self::Bengali,
+            Lang::Cmn => Self::Chinese,
+            Lang::Deu => Self::German,
+            Lang::Eng => Self::English,
+            Lang::Epo => Self::Esperanto,
+            Lang::Fra => Self::French,
+            Lang::Hin => Self::Hindi,
+            Lang::Ind => Self::Indonesian,
+            Lang::Ita => Self::Italian,
+            Lang::Jpn => Self::Japanese,
+            Lang::Pan => Self::Punjabi,
+            Lang::Por => Self::Portuguese,
+            Lang::Rus => Self::Russian,
+            Lang::Spa => Self::Spanish,
+            Lang::Tur => Self::Turkish,
+            Lang::Urd => Self::Urdu,
+        }
+    }
+}
+
+#[cfg(feature = "whatlang")]
 impl TryFrom<whatlang::Lang> for Lang {
     type Error = whatlang::Lang;
 
@@ -90,6 +134,33 @@ impl TryFrom<whatlang::Lang> for Lang {
             whatlang::Lang::Tur => Ok(Self::Tur),
             whatlang::Lang::Urd => Ok(Self::Urd),
             lang => Err(lang),
+        }
+    }
+}
+
+#[cfg(feature = "lingua")]
+impl TryFrom<lingua::Language> for Lang {
+    type Error = lingua::Language;
+
+    fn try_from(lang: lingua::Language) -> Result<Self, Self::Error> {
+        match lang {
+            lingua::Language::Arabic => Ok(Self::Ara),
+            lingua::Language::Bengali => Ok(Self::Ben),
+            lingua::Language::Chinese => Ok(Self::Cmn),
+            lingua::Language::German => Ok(Self::Deu),
+            lingua::Language::English => Ok(Self::Eng),
+            lingua::Language::Esperanto => Ok(Self::Epo),
+            lingua::Language::French => Ok(Self::Fra),
+            lingua::Language::Hindi => Ok(Self::Hin),
+            lingua::Language::Indonesian => Ok(Self::Ind),
+            lingua::Language::Italian => Ok(Self::Ita),
+            lingua::Language::Japanese => Ok(Self::Jpn),
+            lingua::Language::Punjabi => Ok(Self::Pan),
+            lingua::Language::Portuguese => Ok(Self::Por),
+            lingua::Language::Russian => Ok(Self::Rus),
+            lingua::Language::Spanish => Ok(Self::Spa),
+            lingua::Language::Turkish => Ok(Self::Tur),
+            lingua::Language::Urdu => Ok(Self::Urd),
         }
     }
 }
@@ -136,6 +207,11 @@ impl Detector {
     /// is unreliable or it is probably a language we don't support at the moment.
     fn detect(&self, text: &str) -> Option<Lang> {
         let allowlist = self.langs.iter().map(|&lang| lang.into()).collect();
+        self.detect_impl(text, allowlist)
+    }
+
+    #[cfg(feature = "whatlang")]
+    fn detect_impl(&self, text: &str, allowlist: Vec<whatlang::Lang>) -> Option<Lang> {
         let detector = whatlang::Detector::with_allowlist(allowlist);
 
         let info = detector.detect(text)?;
@@ -145,6 +221,15 @@ impl Detector {
         } else {
             None
         }
+    }
+
+    #[cfg(feature = "lingua")]
+    fn detect_impl(&self, text: &str, allowlist: Vec<lingua::Language>) -> Option<Lang> {
+        let detector = lingua::LanguageDetectorBuilder::from_languages(&allowlist).build();
+
+        let lang = detector.detect_language_of(text)?;
+        debug!("lingua language: {lang:#?}");
+        lang.try_into().ok()
     }
 }
 
@@ -172,7 +257,11 @@ mod tests {
         use strum::IntoEnumIterator;
 
         for lang in Lang::iter() {
+            #[cfg(feature = "whatlang")]
             assert_eq!(Ok(lang), whatlang::Lang::from(lang).try_into());
+
+            #[cfg(feature = "lingua")]
+            assert_eq!(Ok(lang), lingua::Language::from(lang).try_into());
         }
     }
 }

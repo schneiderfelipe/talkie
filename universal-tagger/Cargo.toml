@@ -18,7 +18,44 @@ lingua = { version = "1.4.0", default-features = false, optional = true }
 whatlang = { version = "0.16.2", default-features = false, optional = true }
 
 [features]
-default = ["whatlang"]
+default = [
+  "lingua",
+  "arabic",
+  "bengali",
+  "english",
+  "esperanto",
+  "french",
+  "german",
+  "hindi",
+  "indonesian",
+  "italian",
+  "japanese",
+  "mandarin",
+  "portuguese",
+  "punjabi",
+  "russian",
+  "spanish",
+  "turkish",
+  "urdu",
+]
+arabic = ["lingua/arabic"]
+bengali = ["lingua/bengali"]
+english = ["lingua/english"]
+esperanto = ["lingua/esperanto"]
+french = ["lingua/french"]
+german = ["lingua/german"]
+hindi = ["lingua/hindi"]
+indonesian = ["lingua/indonesian"]
+italian = ["lingua/italian"]
+japanese = ["lingua/japanese"]
+mandarin = ["lingua/chinese"]
+portuguese = ["lingua/portuguese"]
+punjabi = ["lingua/punjabi"]
+russian = ["lingua/russian"]
+spanish = ["lingua/spanish"]
+turkish = ["lingua/turkish"]
+urdu = ["lingua/urdu"]
+
 
 [dev-dependencies]
 textarea = { path = "../textarea" }
