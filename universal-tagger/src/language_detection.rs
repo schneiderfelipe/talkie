@@ -1,8 +1,10 @@
+use std::collections::BTreeSet;
+
 use strum::EnumIter;
 
 /// Language codes following the [ISO 639-3](https://en.wikipedia.org/wiki/ISO_639-3) standard.
 #[non_exhaustive]
-#[derive(Clone, Copy, Debug, EnumIter, PartialEq)]
+#[derive(Clone, Copy, Debug, EnumIter, PartialEq, Eq, PartialOrd, Ord)]
 enum Language {
     /// العربية (Arabic).
     Ara,
@@ -91,22 +93,35 @@ impl TryFrom<whatlang::Lang> for Language {
     }
 }
 
-/// Detect a natural language.
-///
-/// This returns [`None`] whenever the detection fails, its result
-/// is unreliable or it is probably a language we don't support at the moment.
-fn detect_language(text: &str) -> Option<Language> {
-    use strum::IntoEnumIterator;
-    use whatlang::Detector;
+/// Language detector.
+struct Detector {
+    languages: BTreeSet<Language>,
+}
 
-    let allowlist = Language::iter().map(|lang| lang.into()).collect();
-    let detector = Detector::with_allowlist(allowlist);
+impl Default for Detector {
+    fn default() -> Self {
+        use strum::IntoEnumIterator;
 
-    let info = detector.detect(text)?;
-    if info.is_reliable() {
-        info.lang().try_into().ok()
-    } else {
-        None
+        let languages = Language::iter().collect();
+        Self { languages }
+    }
+}
+
+impl Detector {
+    /// Detect a natural language.
+    ///
+    /// This returns [`None`] whenever the detection fails, its result
+    /// is unreliable or it is probably a language we don't support at the moment.
+    fn detect(&self, text: &str) -> Option<Language> {
+        let allowlist = self.languages.iter().map(|&lang| lang.into()).collect();
+        let detector = whatlang::Detector::with_allowlist(allowlist);
+
+        let info = detector.detect(text)?;
+        if info.is_reliable() {
+            info.lang().try_into().ok()
+        } else {
+            None
+        }
     }
 }
 
@@ -117,11 +132,11 @@ mod tests {
     #[test]
     fn it_works() {
         let text = "Ĉu vi ne volas eklerni Esperanton? Bonvolu! Estas unu de la plej bonaj aferoj!";
-        let lang = detect_language(text).unwrap();
+        let lang = Detector::default().detect(text).unwrap();
         assert_eq!(lang, Language::Epo);
 
         let text = "There is no reason not to learn Esperanto.";
-        let lang = detect_language(text).unwrap();
+        let lang = Detector::default().detect(text).unwrap();
         assert_eq!(lang, Language::Eng);
     }
 
