@@ -278,6 +278,10 @@ impl Detector {
     /// This returns [`None`] whenever the detection fails, its result
     /// is unreliable or it is probably a language we don't support at the moment.
     fn detect(&self, text: &str) -> Option<Lang> {
+        assert!(
+            self.langs.len() > 1,
+            "Detector needs at least two languages to choose from"
+        );
         self.detect_impl(text)
     }
 
