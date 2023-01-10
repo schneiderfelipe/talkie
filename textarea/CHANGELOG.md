@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Chore
+
+ - <csr-id-a53b05429cea438631a40238c137de7c93699888/> update CHANGELOG.md
+
 ### Documentation
 
  - <csr-id-539d44783671b4143fa769c58c5319496bb99757/> add license to README.md
@@ -19,8 +23,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 2 commits contributed to the release.
- - 2 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 3 commits contributed to the release over the course of 1 calendar day.
+ - 1 day passed between releases.
+ - 3 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
 
 ### Commit Details
@@ -30,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - update CHANGELOG.md ([`a53b054`](https://github.com/schneiderfelipe/talkie/commit/a53b05429cea438631a40238c137de7c93699888))
     - support no-std in textarea ([`fe2b031`](https://github.com/schneiderfelipe/talkie/commit/fe2b031280915c547b22c73ce29f8477361eafe0))
     - add license to README.md ([`539d447`](https://github.com/schneiderfelipe/talkie/commit/539d44783671b4143fa769c58c5319496bb99757))
 </details>
