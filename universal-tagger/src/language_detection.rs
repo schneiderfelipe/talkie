@@ -6,7 +6,7 @@ use strum::EnumIter;
 /// Language codes following the [ISO 639-3](https://en.wikipedia.org/wiki/ISO_639-3) standard.
 #[non_exhaustive]
 #[derive(Clone, Copy, Debug, EnumIter, PartialEq, Eq, PartialOrd, Ord)]
-enum Lang {
+pub enum Lang {
     /// العربية (Arabic).
     #[cfg(feature = "arabic")]
     Ara,
@@ -235,17 +235,17 @@ impl TryFrom<lingua::Language> for Lang {
 
 /// Language detector.
 #[derive(Debug)]
-struct Detector {
+pub struct LanguageDetector {
     langs: BTreeSet<Lang>,
 }
 
-impl Default for Detector {
+impl Default for LanguageDetector {
     fn default() -> Self {
         Self::all()
     }
 }
 
-impl Detector {
+impl LanguageDetector {
     fn empty() -> Self {
         Self {
             langs: BTreeSet::default(),
@@ -277,7 +277,7 @@ impl Detector {
     ///
     /// This returns [`None`] whenever the detection fails, its result
     /// is unreliable or it is probably a language we don't support at the moment.
-    fn detect(&self, text: &str) -> Option<Lang> {
+    pub fn detect(&self, text: &str) -> Option<Lang> {
         assert!(
             self.langs.len() > 1,
             "Detector needs at least two languages to choose from"
@@ -326,7 +326,7 @@ mod tests {
     #[test]
     fn simple_usage() {
         let text = "Ĉu vi ne volas eklerni Esperanton? Bonvolu! Estas unu de la plej bonaj aferoj!";
-        let lang = Detector::default().detect(text).unwrap();
+        let lang = LanguageDetector::default().detect(text).unwrap();
         assert_eq!(lang, Lang::Epo);
     }
 
@@ -334,7 +334,7 @@ mod tests {
     #[test]
     fn allow() {
         let text = "There is no reason not to learn Esperanto.";
-        let lang = Detector::empty()
+        let lang = LanguageDetector::empty()
             .allow(Lang::Eng)
             .allow(Lang::Rus)
             .detect(text)
