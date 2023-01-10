@@ -1,6 +1,8 @@
-use whatlang::{detect, Lang};
+use strum::EnumIter;
+use whatlang::detect;
 
 #[non_exhaustive]
+#[derive(Clone, Copy, Debug, EnumIter, PartialEq)]
 enum Language {
     /// العربية (Arabic).
     Ara,
@@ -12,6 +14,8 @@ enum Language {
     Deu,
     /// English (English).
     Eng,
+    /// Esperanto (Esperanto).
+    Epo,
     /// Français (French).
     Fra,
     /// हिन्दी (Hindi).
@@ -36,14 +40,65 @@ enum Language {
     Urd,
 }
 
+impl From<Language> for whatlang::Lang {
+    fn from(lang: Language) -> Self {
+        match lang {
+            Language::Ara => whatlang::Lang::Ara,
+            Language::Ben => whatlang::Lang::Ben,
+            Language::Cmn => whatlang::Lang::Cmn,
+            Language::Deu => whatlang::Lang::Deu,
+            Language::Eng => whatlang::Lang::Eng,
+            Language::Epo => whatlang::Lang::Epo,
+            Language::Fra => whatlang::Lang::Fra,
+            Language::Hin => whatlang::Lang::Hin,
+            Language::Ind => whatlang::Lang::Ind,
+            Language::Ita => whatlang::Lang::Ita,
+            Language::Jpn => whatlang::Lang::Jpn,
+            Language::Pan => whatlang::Lang::Pan,
+            Language::Por => whatlang::Lang::Por,
+            Language::Rus => whatlang::Lang::Rus,
+            Language::Spa => whatlang::Lang::Spa,
+            Language::Tur => whatlang::Lang::Tur,
+            Language::Urd => whatlang::Lang::Urd,
+        }
+    }
+}
+
+impl TryFrom<whatlang::Lang> for Language {
+    type Error = whatlang::Lang;
+
+    fn try_from(lang: whatlang::Lang) -> Result<Self, Self::Error> {
+        match lang {
+            whatlang::Lang::Ara => Ok(Language::Ara),
+            whatlang::Lang::Ben => Ok(Language::Ben),
+            whatlang::Lang::Cmn => Ok(Language::Cmn),
+            whatlang::Lang::Deu => Ok(Language::Deu),
+            whatlang::Lang::Eng => Ok(Language::Eng),
+            whatlang::Lang::Epo => Ok(Language::Epo),
+            whatlang::Lang::Fra => Ok(Language::Fra),
+            whatlang::Lang::Hin => Ok(Language::Hin),
+            whatlang::Lang::Ind => Ok(Language::Ind),
+            whatlang::Lang::Ita => Ok(Language::Ita),
+            whatlang::Lang::Jpn => Ok(Language::Jpn),
+            whatlang::Lang::Pan => Ok(Language::Pan),
+            whatlang::Lang::Por => Ok(Language::Por),
+            whatlang::Lang::Rus => Ok(Language::Rus),
+            whatlang::Lang::Spa => Ok(Language::Spa),
+            whatlang::Lang::Tur => Ok(Language::Tur),
+            whatlang::Lang::Urd => Ok(Language::Urd),
+            lang => Err(lang),
+        }
+    }
+}
+
 /// Detect a natural language.
 ///
 /// This returns [`None`] whenever the detection fails or its result
 /// is unreliable.
-fn detect_language(text: &str) -> Option<Lang> {
+fn detect_language(text: &str) -> Option<Language> {
     let info = detect(text)?;
     if info.is_reliable() {
-        Some(info.lang())
+        info.lang().try_into().ok()
     } else {
         None
     }
@@ -57,6 +112,15 @@ mod tests {
     fn it_works() {
         let text = "Ĉu vi ne volas eklerni Esperanton? Bonvolu! Estas unu de la plej bonaj aferoj!";
         let lang = detect_language(text).unwrap();
-        assert_eq!(lang, Lang::Epo);
+        assert_eq!(lang, Language::Epo);
+    }
+
+    #[test]
+    fn conversion_roundtrip() {
+        use strum::IntoEnumIterator;
+
+        for lang in Language::iter() {
+            assert_eq!(Ok(lang), whatlang::Lang::from(lang).try_into());
+        }
     }
 }

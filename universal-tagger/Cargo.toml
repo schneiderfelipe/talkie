@@ -10,6 +10,7 @@ repository = "https://github.com/schneiderfelipe/talkie"
 license = "MIT"
 
 [dependencies]
+strum = { version = "0.24.1", default-features = false, features = ["derive"] }
 unicode-segmentation = { version = "1.10.0", default-features = false }
 whatlang = { version = "0.16.2", default-features = false }
 
