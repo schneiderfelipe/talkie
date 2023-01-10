@@ -277,6 +277,9 @@ impl LanguageDetector {
     ///
     /// This returns [`None`] whenever the detection fails, its result
     /// is unreliable or it is probably a language we don't support at the moment.
+    ///
+    /// # Panics
+    /// This function panics if the list of allowed languages is less than two.
     #[must_use]
     pub fn detect(&self, text: &str) -> Option<Lang> {
         assert!(
