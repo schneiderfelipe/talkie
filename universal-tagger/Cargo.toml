@@ -13,7 +13,10 @@ license = "MIT"
 log = { version = "0.4.17", default-features = false }
 strum = { version = "0.24.1", default-features = false, features = ["derive"] }
 unicode-segmentation = { version = "1.10.0", default-features = false }
-whatlang = { version = "0.16.2", default-features = false }
+whatlang = { version = "0.16.2", default-features = false, optional = true }
+
+[features]
+default = ["whatlang"]
 
 [dev-dependencies]
 textarea = { path = "../textarea" }
