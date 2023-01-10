@@ -1,5 +1,5 @@
 use strum::EnumIter;
-use whatlang::detect;
+use whatlang::{detect, Detector};
 
 #[non_exhaustive]
 #[derive(Clone, Copy, Debug, EnumIter, PartialEq)]
@@ -93,10 +93,15 @@ impl TryFrom<whatlang::Lang> for Language {
 
 /// Detect a natural language.
 ///
-/// This returns [`None`] whenever the detection fails or its result
-/// is unreliable.
+/// This returns [`None`] whenever the detection fails, its result
+/// is unreliable or it is probably a language we don't support at the moment.
 fn detect_language(text: &str) -> Option<Language> {
-    let info = detect(text)?;
+    use strum::IntoEnumIterator;
+
+    let allowlist = Language::iter().map(|lang| lang.into()).collect();
+    let detector = Detector::with_allowlist(allowlist);
+
+    let info = detector.detect(text)?;
     if info.is_reliable() {
         info.lang().try_into().ok()
     } else {
