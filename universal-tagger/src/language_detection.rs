@@ -1,6 +1,6 @@
 use std::collections::BTreeSet;
 
-use log::debug;
+use cfg_if::cfg_if;
 use strum::EnumIter;
 
 /// Language codes following the [ISO 639-3](https://en.wikipedia.org/wiki/ISO_639-3) standard.
@@ -213,30 +213,36 @@ impl Detector {
         self.detect_impl(text)
     }
 
-    #[cfg(feature = "whatlang")]
-    fn detect_impl(&self, text: &str) -> Option<Lang> {
-        let detector = whatlang::Detector::with_allowlist(self.languages());
+    cfg_if! {
+        if #[cfg(feature = "whatlang")] {
+            fn detect_impl(&self, text: &str) -> Option<Lang> {
+                let detector = whatlang::Detector::with_allowlist(self.languages());
 
-        let info = detector.detect(text)?;
-        debug!("whatlang information: {info:#?}");
+                let info = detector.detect(text)?;
+                log::debug!("whatlang information: {info:#?}");
 
-        if info.is_reliable() {
-            let lang = info.lang();
+                if info.is_reliable() {
+                    let lang = info.lang();
 
-            lang.try_into().ok()
+                    lang.try_into().ok()
+                } else {
+                    None
+                }
+            }
+        } else if #[cfg(feature = "lingua")] {
+            fn detect_impl(&self, text: &str) -> Option<Lang> {
+                let detector = lingua::LanguageDetectorBuilder::from_languages(&self.languages()).build();
+
+                let lang = detector.detect_language_of(text)?;
+                log::debug!("lingua language: {lang:#?}");
+
+                lang.try_into().ok()
+            }
         } else {
-            None
+            fn detect_impl(&self, text: &str) -> Option<Lang> {
+                compile_error!("Either feature \"whatlang\" or \"lingua\" must be enabled for this crate.")
+            }
         }
-    }
-
-    #[cfg(feature = "lingua")]
-    fn detect_impl(&self, text: &str) -> Option<Lang> {
-        let detector = lingua::LanguageDetectorBuilder::from_languages(&self.languages()).build();
-
-        let lang = detector.detect_language_of(text)?;
-        debug!("lingua language: {lang:#?}");
-
-        lang.try_into().ok()
     }
 }
 
@@ -244,12 +250,17 @@ impl Detector {
 mod tests {
     use super::*;
 
+    #[cfg(feature = "esperanto")]
     #[test]
-    fn it_works() {
+    fn simple_usage() {
         let text = "Ĉu vi ne volas eklerni Esperanton? Bonvolu! Estas unu de la plej bonaj aferoj!";
         let lang = Detector::default().detect(text).unwrap();
         assert_eq!(lang, Lang::Epo);
+    }
 
+    #[cfg(all(feature = "english", feature = "russian"))]
+    #[test]
+    fn allow() {
         let text = "There is no reason not to learn Esperanto.";
         let lang = Detector::empty()
             .allow(Lang::Eng)
