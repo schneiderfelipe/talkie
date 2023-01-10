@@ -1,6 +1,6 @@
 use strum::EnumIter;
-use whatlang::{detect, Detector};
 
+/// Language codes following the [ISO 639-3](https://en.wikipedia.org/wiki/ISO_639-3) standard.
 #[non_exhaustive]
 #[derive(Clone, Copy, Debug, EnumIter, PartialEq)]
 enum Language {
@@ -97,6 +97,7 @@ impl TryFrom<whatlang::Lang> for Language {
 /// is unreliable or it is probably a language we don't support at the moment.
 fn detect_language(text: &str) -> Option<Language> {
     use strum::IntoEnumIterator;
+    use whatlang::Detector;
 
     let allowlist = Language::iter().map(|lang| lang.into()).collect();
     let detector = Detector::with_allowlist(allowlist);
