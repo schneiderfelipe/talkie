@@ -201,34 +201,41 @@ impl Detector {
         self
     }
 
+    fn languages<L: From<Lang>>(&self) -> Vec<L> {
+        self.langs.iter().map(|&lang| L::from(lang)).collect()
+    }
+
     /// Detect a natural language.
     ///
     /// This returns [`None`] whenever the detection fails, its result
     /// is unreliable or it is probably a language we don't support at the moment.
     fn detect(&self, text: &str) -> Option<Lang> {
-        let allowlist = self.langs.iter().map(|&lang| lang.into()).collect();
-        self.detect_impl(text, allowlist)
+        self.detect_impl(text)
     }
 
     #[cfg(feature = "whatlang")]
-    fn detect_impl(&self, text: &str, allowlist: Vec<whatlang::Lang>) -> Option<Lang> {
-        let detector = whatlang::Detector::with_allowlist(allowlist);
+    fn detect_impl(&self, text: &str) -> Option<Lang> {
+        let detector = whatlang::Detector::with_allowlist(self.languages());
 
         let info = detector.detect(text)?;
         debug!("whatlang information: {info:#?}");
+
         if info.is_reliable() {
-            info.lang().try_into().ok()
+            let lang = info.lang();
+
+            lang.try_into().ok()
         } else {
             None
         }
     }
 
     #[cfg(feature = "lingua")]
-    fn detect_impl(&self, text: &str, allowlist: Vec<lingua::Language>) -> Option<Lang> {
-        let detector = lingua::LanguageDetectorBuilder::from_languages(&allowlist).build();
+    fn detect_impl(&self, text: &str) -> Option<Lang> {
+        let detector = lingua::LanguageDetectorBuilder::from_languages(&self.languages()).build();
 
         let lang = detector.detect_language_of(text)?;
         debug!("lingua language: {lang:#?}");
+
         lang.try_into().ok()
     }
 }
