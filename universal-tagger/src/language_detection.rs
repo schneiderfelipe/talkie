@@ -283,39 +283,42 @@ impl LanguageDetector {
             self.langs.len() > 1,
             "Detector needs at least two languages to choose from"
         );
-        self.detect_impl(text)
-    }
 
-    cfg_if! {
-        if #[cfg(feature = "whatlang")] {
-            fn detect_impl(&self, text: &str) -> Option<Lang> {
-                let detector = whatlang::Detector::with_allowlist(self.languages());
-
-                let info = detector.detect(text)?;
-                log::debug!("whatlang information: {info:#?}");
-
-                if info.is_reliable() {
-                    let lang = info.lang();
-
-                    lang.try_into().ok()
-                } else {
-                    None
-                }
-            }
-        } else if #[cfg(feature = "lingua")] {
-            fn detect_impl(&self, text: &str) -> Option<Lang> {
-                let detector = lingua::LanguageDetectorBuilder::from_languages(&self.languages()).build();
-
-                let lang = detector.detect_language_of(text)?;
-                log::debug!("lingua language: {lang:#?}");
-
-                lang.try_into().ok()
-            }
-        } else {
-            fn detect_impl(&self, text: &str) -> Option<Lang> {
-                compile_error!("Either feature \"whatlang\" or \"lingua\" must be enabled for this crate.")
+        cfg_if! {
+            if #[cfg(feature = "lingua")] {
+                self.detect_lingua(text) // NOTE: higher accuracy
+            } else if #[cfg(feature = "whatlang")] {
+                self.detect_whatlang(text) // NOTE: more performance
+            } else {
+               compile_error!("Either feature \"whatlang\" or \"lingua\" must be enabled for this crate.")
             }
         }
+    }
+
+    #[cfg(feature = "whatlang")]
+    fn detect_whatlang(&self, text: &str) -> Option<Lang> {
+        let detector = whatlang::Detector::with_allowlist(self.languages());
+
+        let info = detector.detect(text)?;
+        log::debug!("whatlang information: {info:#?}");
+
+        if info.is_reliable() {
+            let lang = info.lang();
+
+            lang.try_into().ok()
+        } else {
+            None
+        }
+    }
+
+    #[cfg(feature = "lingua")]
+    fn detect_lingua(&self, text: &str) -> Option<Lang> {
+        let detector = lingua::LanguageDetectorBuilder::from_languages(&self.languages()).build();
+
+        let lang = detector.detect_language_of(text)?;
+        log::debug!("lingua language: {lang:#?}");
+
+        lang.try_into().ok()
     }
 }
 
