@@ -277,6 +277,7 @@ impl LanguageDetector {
     ///
     /// This returns [`None`] whenever the detection fails, its result
     /// is unreliable or it is probably a language we don't support at the moment.
+    #[must_use]
     pub fn detect(&self, text: &str) -> Option<Lang> {
         assert!(
             self.langs.len() > 1,
