@@ -62,6 +62,7 @@ pub enum Lang {
 
 #[cfg(feature = "whatlang")]
 impl From<Lang> for whatlang::Lang {
+    #[inline]
     fn from(lang: Lang) -> Self {
         match lang {
             #[cfg(feature = "arabic")]
@@ -104,6 +105,7 @@ impl From<Lang> for whatlang::Lang {
 
 #[cfg(feature = "lingua")]
 impl From<Lang> for lingua::Language {
+    #[inline]
     fn from(lang: Lang) -> Self {
         match lang {
             #[cfg(feature = "arabic")]
@@ -148,6 +150,7 @@ impl From<Lang> for lingua::Language {
 impl TryFrom<whatlang::Lang> for Lang {
     type Error = whatlang::Lang;
 
+    #[inline]
     fn try_from(lang: whatlang::Lang) -> Result<Self, Self::Error> {
         match lang {
             #[cfg(feature = "arabic")]
@@ -193,6 +196,7 @@ impl TryFrom<whatlang::Lang> for Lang {
 impl TryFrom<lingua::Language> for Lang {
     type Error = lingua::Language;
 
+    #[inline]
     fn try_from(lang: lingua::Language) -> Result<Self, Self::Error> {
         match lang {
             #[cfg(feature = "arabic")]
@@ -240,18 +244,21 @@ pub struct LanguageDetector {
 }
 
 impl Default for LanguageDetector {
+    #[inline]
     fn default() -> Self {
         Self::all()
     }
 }
 
 impl LanguageDetector {
+    #[inline]
     fn empty() -> Self {
         Self {
             langs: BTreeSet::default(),
         }
     }
 
+    #[inline]
     fn all() -> Self {
         use strum::IntoEnumIterator;
 
@@ -259,16 +266,19 @@ impl LanguageDetector {
         Self { langs }
     }
 
+    #[inline]
     fn allow(&mut self, lang: Lang) -> &mut Self {
         self.langs.insert(lang);
         self
     }
 
+    #[inline]
     fn deny(&mut self, lang: Lang) -> &mut Self {
         self.langs.remove(&lang);
         self
     }
 
+    #[inline]
     fn languages<L: From<Lang>>(&self) -> Vec<L> {
         self.langs.iter().map(|&lang| L::from(lang)).collect()
     }
@@ -280,6 +290,7 @@ impl LanguageDetector {
     ///
     /// # Panics
     /// This function panics if the list of allowed languages is less than two.
+    #[inline]
     #[must_use]
     pub fn detect(&self, text: &str) -> Option<Lang> {
         assert!(
@@ -299,6 +310,7 @@ impl LanguageDetector {
     }
 
     #[cfg(feature = "whatlang")]
+    #[inline]
     fn detect_whatlang(&self, text: &str) -> Option<Lang> {
         let detector = whatlang::Detector::with_allowlist(self.languages());
 
@@ -315,6 +327,7 @@ impl LanguageDetector {
     }
 
     #[cfg(feature = "lingua")]
+    #[inline]
     fn detect_lingua(&self, text: &str) -> Option<Lang> {
         let detector = lingua::LanguageDetectorBuilder::from_languages(&self.languages()).build();
 
