@@ -252,14 +252,16 @@ impl Default for LanguageDetector {
 
 impl LanguageDetector {
     #[inline]
-    fn empty() -> Self {
+    #[must_use]
+    pub fn empty() -> Self {
         Self {
             langs: BTreeSet::default(),
         }
     }
 
     #[inline]
-    fn all() -> Self {
+    #[must_use]
+    pub fn all() -> Self {
         use strum::IntoEnumIterator;
 
         let langs = Lang::iter().collect();
@@ -267,20 +269,20 @@ impl LanguageDetector {
     }
 
     #[inline]
-    fn allow(&mut self, lang: Lang) -> &mut Self {
+    pub fn allow(&mut self, lang: Lang) -> &mut Self {
         self.langs.insert(lang);
         self
     }
 
     #[inline]
-    fn deny(&mut self, lang: Lang) -> &mut Self {
+    pub fn deny(&mut self, lang: Lang) -> &mut Self {
         self.langs.remove(&lang);
         self
     }
 
     #[inline]
-    fn languages<L: From<Lang>>(&self) -> Vec<L> {
-        self.langs.iter().map(|&lang| L::from(lang)).collect()
+    pub fn languages<L: From<Lang>>(&self) -> impl Iterator<Item = L> + '_ {
+        self.langs.iter().map(|&lang| L::from(lang))
     }
 
     /// Detect a natural language.
@@ -312,7 +314,7 @@ impl LanguageDetector {
     #[cfg(feature = "whatlang")]
     #[inline]
     fn detect_whatlang(&self, text: &str) -> Option<Lang> {
-        let detector = whatlang::Detector::with_allowlist(self.languages());
+        let detector = whatlang::Detector::with_allowlist(self.languages().collect());
 
         let info = detector.detect(text)?;
         log::debug!("whatlang information: {info:#?}");
