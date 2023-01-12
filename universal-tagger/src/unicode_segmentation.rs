@@ -198,7 +198,7 @@ mod tests {
     }
 
     #[test]
-    fn simple_token_usage() {
+    fn simple_isolated_token_usage() {
         use Position::{First, Last, Middle};
         use UnicodeToken::{Alphabetic, Numeric, Other, Whitespace};
 
@@ -223,6 +223,42 @@ mod tests {
                 (19, Middle(Other("."))),
                 (20, Middle(Other("."))),
                 (21, Middle(Other("]"))),
+                (22, Last(Whitespace("\n"))),
+                (23, First(Alphabetic("The"))),
+                (26, Middle(Whitespace(" "))),
+                (27, Middle(Alphabetic("dog"))),
+                (30, Middle(Whitespace(" "))),
+                (31, Middle(Alphabetic("had"))),
+                (34, Middle(Whitespace(" "))),
+                (35, Middle(Other("$"))),
+                (36, Middle(Numeric("2.50"))),
+                (40, Last(Other("."))),
+            ]
+        );
+    }
+
+    #[test]
+    fn simple_token_usage() {
+        use Position::{First, Last, Middle};
+        use UnicodeToken::{Alphabetic, Numeric, Other, Whitespace};
+
+        let text = "Mr. Fox jumped.\n\t[...]\nThe dog had $2.50.";
+        let sents: Vec<_> = UnicodeSegmenter::default()
+            .split_token_indices(text)
+            .collect();
+        assert_eq!(
+            sents,
+            &[
+                (0, First(Alphabetic("Mr"))),
+                (2, Middle(Other("."))),
+                (3, Last(Whitespace(" "))),
+                (4, First(Alphabetic("Fox"))),
+                (7, Middle(Whitespace(" "))),
+                (8, Middle(Alphabetic("jumped"))),
+                (14, Middle(Other("."))),
+                (15, Last(Whitespace("\n"))),
+                (16, First(Whitespace("\t"))),
+                (17, Middle(Other("[...]"))),
                 (22, Last(Whitespace("\n"))),
                 (23, First(Alphabetic("The"))),
                 (26, Middle(Whitespace(" "))),
