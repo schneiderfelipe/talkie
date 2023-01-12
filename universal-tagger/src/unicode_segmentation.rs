@@ -72,17 +72,9 @@ impl UnicodeSegmenter {
                 (Middle(first), Last(second)) if UnicodeToken::same_kind(&first, &second) => {
                     Ok((first_index, Last(unsafe { first.coalesce_with(second) })))
                 }
-                (First(_), First(_))
-                | (First(_), Only(_))
-                | (Last(_), Last(_))
-                | (Last(_), Middle(_))
-                | (Last(_), Only(_))
-                | (Middle(_), First(_))
-                | (Middle(_), Only(_))
-                | (Only(_), First(_))
-                | (Only(_), Last(_))
-                | (Only(_), Middle(_))
-                | (Only(_), Only(_)) => {
+                (First(_) | Middle(_) | Only(_), First(_))
+                | (First(_) | Last(_) | Middle(_) | Only(_), Only(_))
+                | (Last(_) | Only(_), Last(_) | Middle(_)) => {
                     unreachable!("impossible case: ({first:?}, {second:?})")
                 }
                 _ => Err((fst, snd)),
