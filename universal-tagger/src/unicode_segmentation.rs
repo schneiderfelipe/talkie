@@ -51,6 +51,45 @@ impl UnicodeSegmenter {
             (index, item)
         })
     }
+
+    fn split_token_indices<'text>(
+        &self,
+        text: &'text str,
+    ) -> impl Iterator<Item = (usize, Position<UnicodeToken<'text>>)> {
+        use Position::{First, Last, Middle, Only};
+
+        self.split_isolated_token_indices(text).coalesce(
+            |fst @ (first_index, first), snd @ (_, second)| match (first, second) {
+                (First(first), Middle(second)) if UnicodeToken::same_kind(&first, &second) => {
+                    Ok((first_index, First(unsafe { first.coalesce_with(second) })))
+                }
+                (First(first), Last(second)) if UnicodeToken::same_kind(&first, &second) => {
+                    Ok((first_index, Only(unsafe { first.coalesce_with(second) })))
+                }
+                (Middle(first), Middle(second)) if UnicodeToken::same_kind(&first, &second) => {
+                    Ok((first_index, Middle(unsafe { first.coalesce_with(second) })))
+                }
+                (Middle(first), Last(second)) if UnicodeToken::same_kind(&first, &second) => {
+                    Ok((first_index, Last(unsafe { first.coalesce_with(second) })))
+                }
+                (First(_), First(_))
+                | (First(_), Only(_))
+                | (Last(_), First(_))
+                | (Last(_), Last(_))
+                | (Last(_), Middle(_))
+                | (Last(_), Only(_))
+                | (Middle(_), First(_))
+                | (Middle(_), Only(_))
+                | (Only(_), First(_))
+                | (Only(_), Last(_))
+                | (Only(_), Middle(_))
+                | (Only(_), Only(_)) => {
+                    unreachable!("impossible case: ({first:?}, {second:?})")
+                }
+                _ => Err((fst, snd)),
+            },
+        )
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -71,6 +110,47 @@ impl<'text> From<&'text str> for UnicodeToken<'text> {
             }
             word => Self::Other(word),
         }
+    }
+}
+
+impl<'text> AsRef<str> for UnicodeToken<'text> {
+    fn as_ref(&self) -> &str {
+        use UnicodeToken::{Alphabetic, Numeric, Other, Whitespace};
+
+        match self {
+            Whitespace(word) | Alphabetic(word) | Numeric(word) | Other(word) => word,
+        }
+    }
+}
+
+impl<'text> UnicodeToken<'text> {
+    fn same_kind(first: &Self, second: &Self) -> bool {
+        use UnicodeToken::{Alphabetic, Numeric, Other, Whitespace};
+
+        matches!(
+            (first, second),
+            (Whitespace(_), Whitespace(_))
+                | (Alphabetic(_), Alphabetic(_))
+                | (Numeric(_), Numeric(_))
+                | (Other(_), Other(_))
+        )
+    }
+
+    /// Coalesce two tokens.
+    ///
+    /// They have to be from the same string, be of the same kind, and be next to each other in the string.
+    unsafe fn coalesce_with(self, other: Self) -> Self {
+        use std::{slice, str};
+
+        let (first, second) = (self.as_ref(), other.as_ref());
+
+        let ptr = first.as_ptr();
+        let len = first.len() + second.len();
+
+        let slice = slice::from_raw_parts(ptr, len);
+        let str = str::from_utf8_unchecked(slice);
+
+        str.into()
     }
 }
 
