@@ -10,7 +10,6 @@ impl UnicodeSegmenter {
         text: &'text str,
     ) -> impl Iterator<Item = (usize, &'text str)> {
         text.split_sentence_bound_indices()
-            .map(|(index, sentence)| (index, sentence))
     }
 
     fn split_word_indices<'text>(
@@ -24,28 +23,33 @@ impl UnicodeSegmenter {
                 sentence
                     .split_word_bound_indices()
                     .with_position()
-                    .map(move |item| match item {
-                        First((index, word)) => (start + index, First(word)),
-                        Middle((index, word)) => (start + index, Middle(word)),
-                        Last((index, word)) => (start + index, Last(word)),
-                        Only((index, word)) => (start + index, Only(word)),
+                    .map(move |item| {
+                        let (index, word) = match item {
+                            First((index, word)) => (index, First(word)),
+                            Middle((index, word)) => (index, Middle(word)),
+                            Last((index, word)) => (index, Last(word)),
+                            Only((index, word)) => (index, Only(word)),
+                        };
+                        (start + index, word)
                     })
             })
     }
 
-    fn split_token_indices<'text>(
+    fn split_isolated_token_indices<'text>(
         &self,
         text: &'text str,
     ) -> impl Iterator<Item = (usize, Position<UnicodeToken<'text>>)> {
         use Position::{First, Last, Middle, Only};
 
-        self.split_word_indices(text)
-            .map(|(index, item)| match item {
-                First(word) => (index, First(UnicodeToken::from(word))),
-                Middle(word) => (index, Middle(UnicodeToken::from(word))),
-                Last(word) => (index, Last(UnicodeToken::from(word))),
-                Only(word) => (index, Only(UnicodeToken::from(word))),
-            })
+        self.split_word_indices(text).map(|(index, item)| {
+            let item = match item {
+                First(word) => First(UnicodeToken::from(word)),
+                Middle(word) => Middle(UnicodeToken::from(word)),
+                Last(word) => Last(UnicodeToken::from(word)),
+                Only(word) => Only(UnicodeToken::from(word)),
+            };
+            (index, item)
+        })
     }
 }
 
@@ -121,7 +125,7 @@ mod tests {
 
         let text = "Mr. Fox jumped.\n\t[...]\nThe dog had $2.50.";
         let sents: Vec<_> = UnicodeSegmenter::default()
-            .split_token_indices(text)
+            .split_isolated_token_indices(text)
             .collect();
         assert_eq!(
             sents,
