@@ -18,28 +18,10 @@ unicode-segmentation = { version = "1.10.0", default-features = false }
 cfg-if = { version = "1.0.0", default-features = false }
 log = { version = "0.4.17", default-features = false }
 strum = { version = "0.24.1", default-features = false, features = ["derive"] }
+itertools = { version = "0.10.5", default-features = false }
 
 [features]
-default = [
-  "whatlang",
-  "arabic",
-  "bengali",
-  "english",
-  "esperanto",
-  "french",
-  "german",
-  "hindi",
-  "indonesian",
-  "italian",
-  "japanese",
-  "mandarin",
-  "portuguese",
-  "punjabi",
-  "russian",
-  "spanish",
-  "turkish",
-  "urdu",
-]
+default = ["whatlang", "arabic", "bengali", "english", "esperanto", "french", "german", "hindi", "indonesian", "italian", "japanese", "mandarin", "portuguese", "punjabi", "russian", "spanish", "turkish", "urdu"]
 arabic = ["lingua?/arabic"]
 bengali = ["lingua?/bengali"]
 english = ["lingua?/english"]
