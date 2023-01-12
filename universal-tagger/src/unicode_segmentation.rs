@@ -115,7 +115,7 @@ impl<'text> AsRef<str> for UnicodeToken<'text> {
 }
 
 impl<'text> UnicodeToken<'text> {
-    fn same_kind(first: &Self, second: &Self) -> bool {
+    const fn same_kind(first: &Self, second: &Self) -> bool {
         use UnicodeToken::{Alphabetic, Numeric, Other, Whitespace};
 
         matches!(
@@ -139,9 +139,9 @@ impl<'text> UnicodeToken<'text> {
         let len = first.len() + second.len();
 
         let slice = slice::from_raw_parts(ptr, len);
-        let str = str::from_utf8_unchecked(slice);
+        let utf8 = str::from_utf8_unchecked(slice);
 
-        str.into()
+        utf8.into()
     }
 }
 
