@@ -51,20 +51,20 @@ impl UnicodeSegmenter {
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 enum UnicodeToken<'text> {
+    Whitespace(&'text str),
     Alphabetic(&'text str),
     Numeric(&'text str),
-    Whitespace(&'text str),
     Other(&'text str),
 }
 
 impl<'text> From<&'text str> for UnicodeToken<'text> {
     fn from(word: &'text str) -> Self {
         match word {
+            word if word.trim().is_empty() => Self::Whitespace(word),
             word if word.chars().all(char::is_alphabetic) => Self::Alphabetic(word),
             word if word.chars().all(char::is_numeric) || word.parse::<f64>().is_ok() => {
                 Self::Numeric(word)
             }
-            word if word.trim().is_empty() => Self::Whitespace(word),
             word => Self::Other(word),
         }
     }
