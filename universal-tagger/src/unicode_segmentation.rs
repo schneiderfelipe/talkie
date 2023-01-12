@@ -2,7 +2,7 @@ use itertools::{Itertools, Position};
 use unicode_segmentation::UnicodeSegmentation;
 
 #[derive(Default)]
-struct UnicodeSegmenter {}
+struct UnicodeSegmenter;
 
 impl UnicodeSegmenter {
     fn split_sentence_indices<'text>(
@@ -119,7 +119,7 @@ mod tests {
         use Position::{First, Last, Middle};
         use UnicodeToken::{Alphabetic, Numeric, Other, Whitespace};
 
-        let text = "Mr. Fox jumped. [...] The dog had $2.50.";
+        let text = "Mr. Fox jumped.\n\t[...]\nThe dog had $2.50.";
         let sents: Vec<_> = UnicodeSegmenter::default()
             .split_token_indices(text)
             .collect();
@@ -133,22 +133,23 @@ mod tests {
                 (7, Middle(Whitespace(" "))),
                 (8, Middle(Alphabetic("jumped"))),
                 (14, Middle(Other("."))),
-                (15, Last(Whitespace(" "))),
-                (16, First(Other("["))),
-                (17, Middle(Other("."))),
+                (15, Last(Whitespace("\n"))),
+                (16, First(Whitespace("\t"))),
+                (17, Middle(Other("["))),
                 (18, Middle(Other("."))),
                 (19, Middle(Other("."))),
-                (20, Middle(Other("]"))),
-                (21, Last(Whitespace(" "))),
-                (22, First(Alphabetic("The"))),
-                (25, Middle(Whitespace(" "))),
-                (26, Middle(Alphabetic("dog"))),
-                (29, Middle(Whitespace(" "))),
-                (30, Middle(Alphabetic("had"))),
-                (33, Middle(Whitespace(" "))),
-                (34, Middle(Other("$"))),
-                (35, Middle(Numeric("2.50"))),
-                (39, Last(Other("."))),
+                (20, Middle(Other("."))),
+                (21, Middle(Other("]"))),
+                (22, Last(Whitespace("\n"))),
+                (23, First(Alphabetic("The"))),
+                (26, Middle(Whitespace(" "))),
+                (27, Middle(Alphabetic("dog"))),
+                (30, Middle(Whitespace(" "))),
+                (31, Middle(Alphabetic("had"))),
+                (34, Middle(Whitespace(" "))),
+                (35, Middle(Other("$"))),
+                (36, Middle(Numeric("2.50"))),
+                (40, Last(Other("."))),
             ]
         );
     }
