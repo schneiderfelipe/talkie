@@ -49,20 +49,28 @@ pub fn split_token_indices(text: &str) -> impl Iterator<Item = (usize, Position<
 
     split_isolated_token_indices(text).coalesce(|fst @ (first_index, first), snd @ (_, second)| {
         match (first, second) {
-            (First(first), Middle(second)) if UnicodeToken::same_kind(&first, &second) => {
-                Ok((first_index, First(unsafe { first.coalesce_with(second) })))
-            }
             (First(first), Last(second)) if UnicodeToken::same_kind(&first, &second) => {
                 Ok((first_index, Only(unsafe { first.coalesce_with(second) })))
             }
-            (Middle(first), Middle(second)) if UnicodeToken::same_kind(&first, &second) => {
-                Ok((first_index, Middle(unsafe { first.coalesce_with(second) })))
+            (First(first), Middle(second)) if UnicodeToken::same_kind(&first, &second) => {
+                Ok((first_index, First(unsafe { first.coalesce_with(second) })))
+            }
+            (Last(first), Only(second)) if UnicodeToken::same_kind(&first, &second) => {
+                Ok((first_index, Last(unsafe { first.coalesce_with(second) })))
             }
             (Middle(first), Last(second)) if UnicodeToken::same_kind(&first, &second) => {
                 Ok((first_index, Last(unsafe { first.coalesce_with(second) })))
             }
-            (First(_) | Middle(_) | Only(_), First(_))
-            | (First(_) | Last(_) | Middle(_) | Only(_), Only(_))
+            (Middle(first), Middle(second)) if UnicodeToken::same_kind(&first, &second) => {
+                Ok((first_index, Middle(unsafe { first.coalesce_with(second) })))
+            }
+            (Only(first), First(second)) if UnicodeToken::same_kind(&first, &second) => {
+                Ok((first_index, First(unsafe { first.coalesce_with(second) })))
+            }
+            (Only(first), Only(second)) if UnicodeToken::same_kind(&first, &second) => {
+                Ok((first_index, Only(unsafe { first.coalesce_with(second) })))
+            }
+            (First(_) | Middle(_), First(_) | Only(_))
             | (Last(_) | Only(_), Last(_) | Middle(_)) => {
                 unreachable!("impossible case: ({first:?}, {second:?})")
             }
