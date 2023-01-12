@@ -13,10 +13,11 @@ license = "MIT"
 lingua = { version = "1.4.0", default-features = false, optional = true }
 whatlang = { version = "0.16.2", default-features = false, optional = true }
 
+unicode-segmentation = { version = "1.10.0", default-features = false }
+
 cfg-if = { version = "1.0.0", default-features = false }
 log = { version = "0.4.17", default-features = false }
 strum = { version = "0.24.1", default-features = false, features = ["derive"] }
-unicode-segmentation = { version = "1.10.0", default-features = false }
 
 [features]
 default = [
