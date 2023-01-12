@@ -2,7 +2,7 @@ use itertools::{Itertools, Position};
 use unicode_segmentation::UnicodeSegmentation;
 
 #[derive(Default)]
-struct UnicodeSegmenter;
+pub struct UnicodeSegmenter;
 
 impl UnicodeSegmenter {
     fn split_sentence_indices<'text>(
@@ -52,7 +52,7 @@ impl UnicodeSegmenter {
         })
     }
 
-    fn split_token_indices<'text>(
+    pub fn split_token_indices<'text>(
         &self,
         text: &'text str,
     ) -> impl Iterator<Item = (usize, Position<UnicodeToken<'text>>)> {
@@ -84,7 +84,7 @@ impl UnicodeSegmenter {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
-enum UnicodeToken<'text> {
+pub enum UnicodeToken<'text> {
     Whitespace(&'text str),
     Alphabetic(&'text str),
     Numeric(&'text str),
