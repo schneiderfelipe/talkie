@@ -5,4 +5,4 @@ mod unicode_segmentation;
 
 pub use language_detection::LanguageDetector;
 
-pub use crate::unicode_segmentation::split_token_indices;
+pub use crate::unicode_segmentation::token_position_indices;

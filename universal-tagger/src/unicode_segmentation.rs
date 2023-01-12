@@ -2,37 +2,33 @@ use itertools::{Itertools, Position};
 use unicode_segmentation::UnicodeSegmentation;
 
 #[inline]
-fn split_sentence_indices(text: &str) -> impl Iterator<Item = (usize, &str)> {
-    text.split_sentence_bound_indices()
-}
-
-#[inline]
-fn split_word_indices(text: &str) -> impl Iterator<Item = (usize, Position<&str>)> {
+fn word_position_indices(text: &str) -> impl Iterator<Item = (usize, Position<&str>)> {
     use Position::{First, Last, Middle, Only};
 
-    split_sentence_indices(text).flat_map(|(start, sentence)| {
-        sentence
-            .split_word_bound_indices()
-            .with_position()
-            .map(move |item| {
-                let (index, word) = match item {
-                    First((index, word)) => (index, First(word)),
-                    Middle((index, word)) => (index, Middle(word)),
-                    Last((index, word)) => (index, Last(word)),
-                    Only((index, word)) => (index, Only(word)),
-                };
-                (start + index, word)
-            })
-    })
+    text.split_sentence_bound_indices()
+        .flat_map(|(start, sentence)| {
+            sentence
+                .split_word_bound_indices()
+                .with_position()
+                .map(move |item| {
+                    let (index, word) = match item {
+                        First((index, word)) => (index, First(word)),
+                        Middle((index, word)) => (index, Middle(word)),
+                        Last((index, word)) => (index, Last(word)),
+                        Only((index, word)) => (index, Only(word)),
+                    };
+                    (start + index, word)
+                })
+        })
 }
 
 #[inline]
-fn split_isolated_token_indices(
+fn isolated_token_position_indices(
     text: &str,
 ) -> impl Iterator<Item = (usize, Position<UnicodeToken>)> {
     use Position::{First, Last, Middle, Only};
 
-    split_word_indices(text).map(|(index, item)| {
+    word_position_indices(text).map(|(index, item)| {
         let item = match item {
             First(word) => First(UnicodeToken::from(word)),
             Middle(word) => Middle(UnicodeToken::from(word)),
@@ -44,11 +40,11 @@ fn split_isolated_token_indices(
 }
 
 #[inline]
-pub fn split_token_indices(text: &str) -> impl Iterator<Item = (usize, Position<UnicodeToken>)> {
+pub fn token_position_indices(text: &str) -> impl Iterator<Item = (usize, Position<UnicodeToken>)> {
     use Position::{First, Last, Middle, Only};
 
-    split_isolated_token_indices(text).coalesce(|fst @ (first_index, first), snd @ (_, second)| {
-        match (first, second) {
+    isolated_token_position_indices(text).coalesce(
+        |fst @ (first_index, first), snd @ (_, second)| match (first, second) {
             (First(first), Last(second)) if UnicodeToken::same_kind(&first, &second) => {
                 Ok((first_index, Only(unsafe { first.coalesce_with(second) })))
             }
@@ -75,8 +71,8 @@ pub fn split_token_indices(text: &str) -> impl Iterator<Item = (usize, Position<
                 unreachable!("impossible case: ({first:?}, {second:?})")
             }
             _ => Err((fst, snd)),
-        }
-    })
+        },
+    )
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -154,7 +150,7 @@ mod tests {
         use Position::{First, Last, Middle};
 
         let text = "Mr. Fox jumped.  [...]  The dog was too lazy.  ";
-        let sents: Vec<_> = split_word_indices(text).collect();
+        let sents: Vec<_> = word_position_indices(text).collect();
         assert_eq!(
             sents,
             &[
@@ -193,7 +189,7 @@ mod tests {
         use UnicodeToken::{Alphabetic, Numeric, Other, Whitespace};
 
         let text = "Mr. Fox jumped.\n\t[...]\nThe dog had $2.50.";
-        let sents: Vec<_> = split_isolated_token_indices(text).collect();
+        let sents: Vec<_> = isolated_token_position_indices(text).collect();
         assert_eq!(
             sents,
             &[
@@ -231,7 +227,7 @@ mod tests {
         use UnicodeToken::{Alphabetic, Numeric, Other, Whitespace};
 
         let text = "Mr.  Fox  jumped. \n \t [...] \n The  dog  had  $2.50. ";
-        let sents: Vec<_> = split_token_indices(text).collect();
+        let sents: Vec<_> = token_position_indices(text).collect();
         assert_eq!(
             sents,
             &[
