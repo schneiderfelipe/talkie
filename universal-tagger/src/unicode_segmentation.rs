@@ -74,7 +74,6 @@ impl UnicodeSegmenter {
                 }
                 (First(_), First(_))
                 | (First(_), Only(_))
-                | (Last(_), First(_))
                 | (Last(_), Last(_))
                 | (Last(_), Middle(_))
                 | (Last(_), Only(_))
