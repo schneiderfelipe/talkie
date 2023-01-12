@@ -22,7 +22,7 @@ impl UnicodeSegmenter {
     ) -> impl Iterator<Item = (usize, UnicodeWord<'text>)> {
         self.split_sentence_indices(text)
             .flat_map(|(start, sentence)| {
-                use Position::*;
+                use Position::{First, Last, Middle, Only};
 
                 sentence
                     .split_word_bound_indices()
