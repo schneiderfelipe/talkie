@@ -83,7 +83,7 @@ impl UnicodeSegmenter {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum UnicodeToken<'text> {
     Whitespace(&'text str),
     Alphabetic(&'text str),
