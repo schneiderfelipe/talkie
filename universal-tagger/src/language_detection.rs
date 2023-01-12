@@ -301,10 +301,12 @@ impl LanguageDetector {
         );
 
         cfg_if! {
-            if #[cfg(feature = "lingua")] {
-                self.detect_lingua(text) // NOTE: higher accuracy
+            if #[cfg(all(feature = "whatlang", feature = "lingua"))] {
+                self.detect_whatlang(text).or_else(|| self.detect_lingua(text)) // NOTE: best of both worlds
             } else if #[cfg(feature = "whatlang")] {
                 self.detect_whatlang(text) // NOTE: more performance
+            } else if #[cfg(feature = "lingua")] {
+                self.detect_lingua(text) // NOTE: higher accuracy
             } else {
                compile_error!("Either feature \"whatlang\" or \"lingua\" must be enabled for this crate.")
             }
@@ -331,7 +333,9 @@ impl LanguageDetector {
     #[cfg(feature = "lingua")]
     #[inline]
     fn detect_lingua(&self, text: &str) -> Option<Lang> {
-        let detector = lingua::LanguageDetectorBuilder::from_languages(&self.languages()).build();
+        let detector =
+            lingua::LanguageDetectorBuilder::from_languages(&self.languages().collect::<Vec<_>>())
+                .build();
 
         let lang = detector.detect_language_of(text)?;
         log::debug!("lingua language: {lang:#?}");
