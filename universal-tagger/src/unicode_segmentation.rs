@@ -42,37 +42,29 @@ fn isolated_token_position_indices(
 #[inline]
 pub fn token_position_indices(text: &str) -> impl Iterator<Item = (usize, Position<UnicodeToken>)> {
     use Position::{First, Last, Middle, Only};
+    use UnicodeToken::Whitespace;
 
-    isolated_token_position_indices(text).coalesce(
-        |fst @ (first_index, first), snd @ (_, second)| match (first, second) {
-            (First(first), Last(second)) if UnicodeToken::same_kind(&first, &second) => {
-                Ok((first_index, Only(unsafe { first.coalesce_with(second) })))
+    let iter = coalesce_tokens(isolated_token_position_indices(text)).coalesce(
+        |fst @ (first_index, first), snd @ (second_index, second)| match (first, second) {
+            (First(first), Last(whitespace @ Whitespace(_))) => {
+                Err(((first_index, Only(first)), (second_index, Only(whitespace))))
             }
-            (First(first), Middle(second)) if UnicodeToken::same_kind(&first, &second) => {
-                Ok((first_index, First(unsafe { first.coalesce_with(second) })))
-            }
-            (Last(first), Only(second)) if UnicodeToken::same_kind(&first, &second) => {
-                Ok((first_index, Last(unsafe { first.coalesce_with(second) })))
-            }
-            (Middle(first), Last(second)) if UnicodeToken::same_kind(&first, &second) => {
-                Ok((first_index, Last(unsafe { first.coalesce_with(second) })))
-            }
-            (Middle(first), Middle(second)) if UnicodeToken::same_kind(&first, &second) => {
-                Ok((first_index, Middle(unsafe { first.coalesce_with(second) })))
-            }
-            (Only(first), First(second)) if UnicodeToken::same_kind(&first, &second) => {
-                Ok((first_index, First(unsafe { first.coalesce_with(second) })))
-            }
-            (Only(first), Only(second)) if UnicodeToken::same_kind(&first, &second) => {
-                Ok((first_index, Only(unsafe { first.coalesce_with(second) })))
-            }
-            (First(_) | Middle(_), First(_) | Only(_))
-            | (Last(_) | Only(_), Last(_) | Middle(_)) => {
-                unreachable!("impossible case: ({first:?}, {second:?})")
+            (First(whitespace @ Whitespace(_)), Last(second)) => Err((
+                (first_index, Only(whitespace)),
+                (second_index, Only(second)),
+            )),
+            (First(whitespace @ Whitespace(_)), Middle(second)) => Err((
+                (first_index, Only(whitespace)),
+                (second_index, First(second)),
+            )),
+            (Middle(first), Last(whitespace @ Whitespace(_))) => {
+                Err(((first_index, Last(first)), (second_index, Only(whitespace))))
             }
             _ => Err((fst, snd)),
         },
-    )
+    );
+
+    coalesce_tokens(iter)
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -139,6 +131,47 @@ impl<'text> UnicodeToken<'text> {
 
         utf8.into()
     }
+}
+
+#[inline]
+fn coalesce_tokens<'text, I>(
+    iter: I,
+) -> impl Iterator<Item = (usize, Position<UnicodeToken<'text>>)>
+where
+    I: Iterator<Item = (usize, Position<UnicodeToken<'text>>)>,
+{
+    use Position::{First, Last, Middle, Only};
+
+    iter.coalesce(
+        |fst @ (first_index, first), snd @ (_, second)| match (first, second) {
+            (First(first), Last(second)) if UnicodeToken::same_kind(&first, &second) => {
+                Ok((first_index, Only(unsafe { first.coalesce_with(second) })))
+            }
+            (First(first), Middle(second)) if UnicodeToken::same_kind(&first, &second) => {
+                Ok((first_index, First(unsafe { first.coalesce_with(second) })))
+            }
+            (Last(first), Only(second)) if UnicodeToken::same_kind(&first, &second) => {
+                Ok((first_index, Last(unsafe { first.coalesce_with(second) })))
+            }
+            (Middle(first), Last(second)) if UnicodeToken::same_kind(&first, &second) => {
+                Ok((first_index, Last(unsafe { first.coalesce_with(second) })))
+            }
+            (Middle(first), Middle(second)) if UnicodeToken::same_kind(&first, &second) => {
+                Ok((first_index, Middle(unsafe { first.coalesce_with(second) })))
+            }
+            (Only(first), First(second)) if UnicodeToken::same_kind(&first, &second) => {
+                Ok((first_index, First(unsafe { first.coalesce_with(second) })))
+            }
+            (Only(first), Only(second)) if UnicodeToken::same_kind(&first, &second) => {
+                Ok((first_index, Only(unsafe { first.coalesce_with(second) })))
+            }
+            (First(_) | Middle(_), First(_) | Only(_))
+            | (Last(_) | Only(_), Last(_) | Middle(_)) => {
+                unreachable!("impossible case: ({first:?}, {second:?})")
+            }
+            _ => Err((fst, snd)),
+        },
+    )
 }
 
 #[cfg(test)]
@@ -223,7 +256,7 @@ mod tests {
 
     #[test]
     fn simple_token_usage() {
-        use Position::{First, Last, Middle};
+        use Position::{First, Last, Middle, Only};
         use UnicodeToken::{Alphabetic, Numeric, Other, Whitespace};
 
         let text = "Mr.  Fox  jumped. \n \t [...] \n The  dog  had  $2.50. ";
@@ -232,18 +265,16 @@ mod tests {
             sents,
             &[
                 (0, First(Alphabetic("Mr"))),
-                (2, Middle(Other("."))),
-                (3, Last(Whitespace("  "))),
+                (2, Last(Other("."))),
+                (3, Only(Whitespace("  "))),
                 (5, First(Alphabetic("Fox"))),
                 (8, Middle(Whitespace("  "))),
                 (10, Middle(Alphabetic("jumped"))),
-                (16, Middle(Other("."))),
-                (17, Last(Whitespace(" \n"))),
-                (19, First(Whitespace(" \t "))),
-                (22, Middle(Other("[...]"))),
-                (27, Last(Whitespace(" \n"))),
-                (29, First(Whitespace(" "))),
-                (30, Middle(Alphabetic("The"))),
+                (16, Last(Other("."))),
+                (17, Only(Whitespace(" \n \t "))),
+                (22, Only(Other("[...]"))),
+                (27, Only(Whitespace(" \n "))),
+                (30, First(Alphabetic("The"))),
                 (33, Middle(Whitespace("  "))),
                 (35, Middle(Alphabetic("dog"))),
                 (38, Middle(Whitespace("  "))),
@@ -251,8 +282,8 @@ mod tests {
                 (43, Middle(Whitespace("  "))),
                 (45, Middle(Other("$"))),
                 (46, Middle(Numeric("2.50"))),
-                (50, Middle(Other("."))),
-                (51, Last(Whitespace(" "))),
+                (50, Last(Other("."))),
+                (51, Only(Whitespace(" "))),
             ]
         );
     }
