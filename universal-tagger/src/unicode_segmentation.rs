@@ -61,7 +61,9 @@ impl<'text> From<&'text str> for UnicodeToken<'text> {
     fn from(word: &'text str) -> Self {
         match word {
             word if word.chars().all(char::is_alphabetic) => Self::Alphabetic(word),
-            word if word.chars().all(char::is_numeric) => Self::Numeric(word),
+            word if word.chars().all(char::is_numeric) || word.parse::<f64>().is_ok() => {
+                Self::Numeric(word)
+            }
             word if word.trim().is_empty() => Self::Whitespace(word),
             word => Self::Other(word),
         }
@@ -117,7 +119,7 @@ mod tests {
         use Position::{First, Last, Middle};
         use UnicodeToken::{Alphabetic, Numeric, Other, Whitespace};
 
-        let text = "Mr. Fox jumped. [...] The dog had $2.";
+        let text = "Mr. Fox jumped. [...] The dog had $2.50.";
         let sents: Vec<_> = UnicodeSegmenter::default()
             .split_token_indices(text)
             .collect();
@@ -145,8 +147,8 @@ mod tests {
                 (30, Middle(Alphabetic("had"))),
                 (33, Middle(Whitespace(" "))),
                 (34, Middle(Other("$"))),
-                (35, Middle(Numeric("2"))),
-                (36, Last(Other("."))),
+                (35, Middle(Numeric("2.50"))),
+                (39, Last(Other("."))),
             ]
         );
     }
