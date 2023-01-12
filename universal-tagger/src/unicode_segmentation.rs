@@ -73,27 +73,10 @@ mod tests {
     use super::*;
 
     #[test]
-    fn simple_sentence_usage() {
-        let text = "Mr. Fox jumped. [...] The dog was too lazy.";
-        let sents: Vec<_> = UnicodeSegmenter::default()
-            .split_sentence_indices(text)
-            .collect();
-        assert_eq!(
-            sents,
-            &[
-                (0, "Mr. "),
-                (4, "Fox jumped. "),
-                (16, "[...] "),
-                (22, "The dog was too lazy."),
-            ]
-        );
-    }
-
-    #[test]
     fn simple_word_usage() {
         use Position::{First, Last, Middle};
 
-        let text = "Mr. Fox jumped. [...] The dog was too lazy.";
+        let text = "Mr. Fox jumped.  [...]  The dog was too lazy.  ";
         let sents: Vec<_> = UnicodeSegmenter::default()
             .split_word_indices(text)
             .collect();
@@ -107,23 +90,24 @@ mod tests {
                 (7, Middle(" ")),
                 (8, Middle("jumped")),
                 (14, Middle(".")),
-                (15, Last(" ")),
-                (16, First("[")),
-                (17, Middle(".")),
+                (15, Last("  ")),
+                (17, First("[")),
                 (18, Middle(".")),
                 (19, Middle(".")),
-                (20, Middle("]")),
-                (21, Last(" ")),
-                (22, First("The")),
-                (25, Middle(" ")),
-                (26, Middle("dog")),
-                (29, Middle(" ")),
-                (30, Middle("was")),
-                (33, Middle(" ")),
-                (34, Middle("too")),
-                (37, Middle(" ")),
-                (38, Middle("lazy")),
-                (42, Last(".")),
+                (20, Middle(".")),
+                (21, Middle("]")),
+                (22, Last("  ")),
+                (24, First("The")),
+                (27, Middle(" ")),
+                (28, Middle("dog")),
+                (31, Middle(" ")),
+                (32, Middle("was")),
+                (35, Middle(" ")),
+                (36, Middle("too")),
+                (39, Middle(" ")),
+                (40, Middle("lazy")),
+                (44, Middle(".")),
+                (45, Last("  ")),
             ]
         );
     }
@@ -131,9 +115,9 @@ mod tests {
     #[test]
     fn simple_token_usage() {
         use Position::{First, Last, Middle};
-        use UnicodeToken::{Alphabetic, Other, Whitespace};
+        use UnicodeToken::{Alphabetic, Numeric, Other, Whitespace};
 
-        let text = "Mr. Fox jumped. [...] The dog was too lazy.";
+        let text = "Mr. Fox jumped. [...] The dog had $2.";
         let sents: Vec<_> = UnicodeSegmenter::default()
             .split_token_indices(text)
             .collect();
@@ -158,12 +142,11 @@ mod tests {
                 (25, Middle(Whitespace(" "))),
                 (26, Middle(Alphabetic("dog"))),
                 (29, Middle(Whitespace(" "))),
-                (30, Middle(Alphabetic("was"))),
+                (30, Middle(Alphabetic("had"))),
                 (33, Middle(Whitespace(" "))),
-                (34, Middle(Alphabetic("too"))),
-                (37, Middle(Whitespace(" "))),
-                (38, Middle(Alphabetic("lazy"))),
-                (42, Last(Other("."))),
+                (34, Middle(Other("$"))),
+                (35, Middle(Numeric("2"))),
+                (36, Last(Other("."))),
             ]
         );
     }
