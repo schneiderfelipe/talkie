@@ -1,86 +1,74 @@
 use itertools::{Itertools, Position};
 use unicode_segmentation::UnicodeSegmentation;
 
-#[derive(Default)]
-pub struct UnicodeSegmenter;
+#[inline]
+fn split_sentence_indices(text: &str) -> impl Iterator<Item = (usize, &str)> {
+    text.split_sentence_bound_indices()
+}
 
-impl UnicodeSegmenter {
-    fn split_sentence_indices<'text>(
-        &self,
-        text: &'text str,
-    ) -> impl Iterator<Item = (usize, &'text str)> {
-        text.split_sentence_bound_indices()
-    }
+#[inline]
+fn split_word_indices(text: &str) -> impl Iterator<Item = (usize, Position<&str>)> {
+    use Position::{First, Last, Middle, Only};
 
-    fn split_word_indices<'text>(
-        &self,
-        text: &'text str,
-    ) -> impl Iterator<Item = (usize, Position<&'text str>)> {
-        use Position::{First, Last, Middle, Only};
-
-        self.split_sentence_indices(text)
-            .flat_map(|(start, sentence)| {
-                sentence
-                    .split_word_bound_indices()
-                    .with_position()
-                    .map(move |item| {
-                        let (index, word) = match item {
-                            First((index, word)) => (index, First(word)),
-                            Middle((index, word)) => (index, Middle(word)),
-                            Last((index, word)) => (index, Last(word)),
-                            Only((index, word)) => (index, Only(word)),
-                        };
-                        (start + index, word)
-                    })
+    split_sentence_indices(text).flat_map(|(start, sentence)| {
+        sentence
+            .split_word_bound_indices()
+            .with_position()
+            .map(move |item| {
+                let (index, word) = match item {
+                    First((index, word)) => (index, First(word)),
+                    Middle((index, word)) => (index, Middle(word)),
+                    Last((index, word)) => (index, Last(word)),
+                    Only((index, word)) => (index, Only(word)),
+                };
+                (start + index, word)
             })
-    }
+    })
+}
 
-    fn split_isolated_token_indices<'text>(
-        &self,
-        text: &'text str,
-    ) -> impl Iterator<Item = (usize, Position<UnicodeToken<'text>>)> {
-        use Position::{First, Last, Middle, Only};
+#[inline]
+fn split_isolated_token_indices(
+    text: &str,
+) -> impl Iterator<Item = (usize, Position<UnicodeToken>)> {
+    use Position::{First, Last, Middle, Only};
 
-        self.split_word_indices(text).map(|(index, item)| {
-            let item = match item {
-                First(word) => First(UnicodeToken::from(word)),
-                Middle(word) => Middle(UnicodeToken::from(word)),
-                Last(word) => Last(UnicodeToken::from(word)),
-                Only(word) => Only(UnicodeToken::from(word)),
-            };
-            (index, item)
-        })
-    }
+    split_word_indices(text).map(|(index, item)| {
+        let item = match item {
+            First(word) => First(UnicodeToken::from(word)),
+            Middle(word) => Middle(UnicodeToken::from(word)),
+            Last(word) => Last(UnicodeToken::from(word)),
+            Only(word) => Only(UnicodeToken::from(word)),
+        };
+        (index, item)
+    })
+}
 
-    pub fn split_token_indices<'text>(
-        &self,
-        text: &'text str,
-    ) -> impl Iterator<Item = (usize, Position<UnicodeToken<'text>>)> {
-        use Position::{First, Last, Middle, Only};
+#[inline]
+pub fn split_token_indices(text: &str) -> impl Iterator<Item = (usize, Position<UnicodeToken>)> {
+    use Position::{First, Last, Middle, Only};
 
-        self.split_isolated_token_indices(text).coalesce(
-            |fst @ (first_index, first), snd @ (_, second)| match (first, second) {
-                (First(first), Middle(second)) if UnicodeToken::same_kind(&first, &second) => {
-                    Ok((first_index, First(unsafe { first.coalesce_with(second) })))
-                }
-                (First(first), Last(second)) if UnicodeToken::same_kind(&first, &second) => {
-                    Ok((first_index, Only(unsafe { first.coalesce_with(second) })))
-                }
-                (Middle(first), Middle(second)) if UnicodeToken::same_kind(&first, &second) => {
-                    Ok((first_index, Middle(unsafe { first.coalesce_with(second) })))
-                }
-                (Middle(first), Last(second)) if UnicodeToken::same_kind(&first, &second) => {
-                    Ok((first_index, Last(unsafe { first.coalesce_with(second) })))
-                }
-                (First(_) | Middle(_) | Only(_), First(_))
-                | (First(_) | Last(_) | Middle(_) | Only(_), Only(_))
-                | (Last(_) | Only(_), Last(_) | Middle(_)) => {
-                    unreachable!("impossible case: ({first:?}, {second:?})")
-                }
-                _ => Err((fst, snd)),
-            },
-        )
-    }
+    split_isolated_token_indices(text).coalesce(|fst @ (first_index, first), snd @ (_, second)| {
+        match (first, second) {
+            (First(first), Middle(second)) if UnicodeToken::same_kind(&first, &second) => {
+                Ok((first_index, First(unsafe { first.coalesce_with(second) })))
+            }
+            (First(first), Last(second)) if UnicodeToken::same_kind(&first, &second) => {
+                Ok((first_index, Only(unsafe { first.coalesce_with(second) })))
+            }
+            (Middle(first), Middle(second)) if UnicodeToken::same_kind(&first, &second) => {
+                Ok((first_index, Middle(unsafe { first.coalesce_with(second) })))
+            }
+            (Middle(first), Last(second)) if UnicodeToken::same_kind(&first, &second) => {
+                Ok((first_index, Last(unsafe { first.coalesce_with(second) })))
+            }
+            (First(_) | Middle(_) | Only(_), First(_))
+            | (First(_) | Last(_) | Middle(_) | Only(_), Only(_))
+            | (Last(_) | Only(_), Last(_) | Middle(_)) => {
+                unreachable!("impossible case: ({first:?}, {second:?})")
+            }
+            _ => Err((fst, snd)),
+        }
+    })
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -92,6 +80,7 @@ pub enum UnicodeToken<'text> {
 }
 
 impl<'text> From<&'text str> for UnicodeToken<'text> {
+    #[inline]
     fn from(word: &'text str) -> Self {
         match word {
             word if word.trim().is_empty() => Self::Whitespace(word),
@@ -105,6 +94,7 @@ impl<'text> From<&'text str> for UnicodeToken<'text> {
 }
 
 impl<'text> AsRef<str> for UnicodeToken<'text> {
+    #[inline]
     fn as_ref(&self) -> &str {
         use UnicodeToken::{Alphabetic, Numeric, Other, Whitespace};
 
@@ -115,6 +105,7 @@ impl<'text> AsRef<str> for UnicodeToken<'text> {
 }
 
 impl<'text> UnicodeToken<'text> {
+    #[inline]
     const fn same_kind(first: &Self, second: &Self) -> bool {
         use UnicodeToken::{Alphabetic, Numeric, Other, Whitespace};
 
@@ -130,6 +121,7 @@ impl<'text> UnicodeToken<'text> {
     /// Coalesce two tokens.
     ///
     /// They have to be from the same string, be of the same kind, and be next to each other in the string.
+    #[inline]
     unsafe fn coalesce_with(self, other: Self) -> Self {
         use std::{slice, str};
 
@@ -154,9 +146,7 @@ mod tests {
         use Position::{First, Last, Middle};
 
         let text = "Mr. Fox jumped.  [...]  The dog was too lazy.  ";
-        let sents: Vec<_> = UnicodeSegmenter::default()
-            .split_word_indices(text)
-            .collect();
+        let sents: Vec<_> = split_word_indices(text).collect();
         assert_eq!(
             sents,
             &[
@@ -195,9 +185,7 @@ mod tests {
         use UnicodeToken::{Alphabetic, Numeric, Other, Whitespace};
 
         let text = "Mr. Fox jumped.\n\t[...]\nThe dog had $2.50.";
-        let sents: Vec<_> = UnicodeSegmenter::default()
-            .split_isolated_token_indices(text)
-            .collect();
+        let sents: Vec<_> = split_isolated_token_indices(text).collect();
         assert_eq!(
             sents,
             &[
@@ -235,9 +223,7 @@ mod tests {
         use UnicodeToken::{Alphabetic, Numeric, Other, Whitespace};
 
         let text = "Mr.  Fox  jumped. \n \t [...] \n The  dog  had  $2.50. ";
-        let sents: Vec<_> = UnicodeSegmenter::default()
-            .split_token_indices(text)
-            .collect();
+        let sents: Vec<_> = split_token_indices(text).collect();
         assert_eq!(
             sents,
             &[
