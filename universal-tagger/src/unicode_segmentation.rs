@@ -168,34 +168,37 @@ impl<'text> UnicodeToken<'text> {
 #[inline]
 unsafe fn coalesce_tokens<'text, I>(
     iter: I,
-) -> impl Iterator<Item = (usize, Position<UnicodeToken<'text>>)>
+) -> impl Iterator<Item = (Position<usize>, UnicodeToken<'text>)>
 where
-    I: Iterator<Item = (usize, Position<UnicodeToken<'text>>)>,
+    I: Iterator<Item = (Position<usize>, UnicodeToken<'text>)>,
 {
     use Position::{First, Last, Middle, Only};
 
     iter.coalesce(
-        |fst @ (first_index, first), snd @ (_, second)| match (first, second) {
-            (First(first), Last(second)) if UnicodeToken::can_merge(&first, &second) => {
-                Ok((first_index, Only(unsafe { first.coalesce_with(second) })))
+        |fst @ (first_position, first), snd @ (second_position, second)| match (
+            first_position,
+            second_position,
+        ) {
+            (First(first_index), Last(_)) if UnicodeToken::can_merge(&first, &second) => {
+                Ok((Only(first_index), unsafe { first.coalesce_with(second) }))
             }
-            (First(first), Middle(second)) if UnicodeToken::can_merge(&first, &second) => {
-                Ok((first_index, First(unsafe { first.coalesce_with(second) })))
+            (First(first_index), Middle(_)) if UnicodeToken::can_merge(&first, &second) => {
+                Ok((First(first_index), unsafe { first.coalesce_with(second) }))
             }
-            (Last(first), Only(second)) if UnicodeToken::can_merge(&first, &second) => {
-                Ok((first_index, Last(unsafe { first.coalesce_with(second) })))
+            (Last(first_index), Only(_)) if UnicodeToken::can_merge(&first, &second) => {
+                Ok((Last(first_index), unsafe { first.coalesce_with(second) }))
             }
-            (Middle(first), Last(second)) if UnicodeToken::can_merge(&first, &second) => {
-                Ok((first_index, Last(unsafe { first.coalesce_with(second) })))
+            (Middle(first_index), Last(_)) if UnicodeToken::can_merge(&first, &second) => {
+                Ok((Last(first_index), unsafe { first.coalesce_with(second) }))
             }
-            (Middle(first), Middle(second)) if UnicodeToken::can_merge(&first, &second) => {
-                Ok((first_index, Middle(unsafe { first.coalesce_with(second) })))
+            (Middle(first_index), Middle(_)) if UnicodeToken::can_merge(&first, &second) => {
+                Ok((Middle(first_index), unsafe { first.coalesce_with(second) }))
             }
-            (Only(first), First(second)) if UnicodeToken::can_merge(&first, &second) => {
-                Ok((first_index, First(unsafe { first.coalesce_with(second) })))
+            (Only(first_index), First(_)) if UnicodeToken::can_merge(&first, &second) => {
+                Ok((First(first_index), unsafe { first.coalesce_with(second) }))
             }
-            (Only(first), Only(second)) if UnicodeToken::can_merge(&first, &second) => {
-                Ok((first_index, Only(unsafe { first.coalesce_with(second) })))
+            (Only(first_index), Only(_)) if UnicodeToken::can_merge(&first, &second) => {
+                Ok((Only(first_index), unsafe { first.coalesce_with(second) }))
             }
             (First(_) | Middle(_), First(_) | Only(_))
             | (Last(_) | Only(_), Last(_) | Middle(_)) => {
@@ -207,33 +210,31 @@ where
 }
 
 #[inline]
-pub fn token_position_indices(text: &str) -> impl Iterator<Item = (usize, Position<UnicodeToken>)> {
+pub fn token_position_indices(text: &str) -> impl Iterator<Item = (Position<usize>, UnicodeToken)> {
     use Position::{First, Last, Middle, Only};
     use UnicodeToken::{Separator, SeparatorOrWhitespace, Whitespace};
 
     let iter = isolated_token_position_indices(text);
     // SAFETY: iter yields from the same string and items are adjacent.
     let iter = unsafe { coalesce_tokens(iter) };
-    let iter = iter.coalesce(|fst @ (first_index, first), snd @ (second_index, second)| {
-        match (first, second) {
-            (
-                First(first),
-                Last(sep @ (Separator(_) | Whitespace(_) | SeparatorOrWhitespace(_))),
-            ) => Err(((first_index, Only(first)), (second_index, Only(sep)))),
-            (
-                First(sep @ (Separator(_) | Whitespace(_) | SeparatorOrWhitespace(_))),
-                Last(second),
-            ) => Err(((first_index, Only(sep)), (second_index, Only(second)))),
-            (
-                First(sep @ (Separator(_) | Whitespace(_) | SeparatorOrWhitespace(_))),
-                Middle(second),
-            ) => Err(((first_index, Only(sep)), (second_index, First(second)))),
-            (
-                Middle(first),
-                Last(sep @ (Separator(_) | Whitespace(_) | SeparatorOrWhitespace(_))),
-            ) => Err(((first_index, Last(first)), (second_index, Only(sep)))),
-            _ => Err((fst, snd)),
-        }
+    let iter = iter.coalesce(|fst, snd| match (fst, snd) {
+        (
+            (First(first_index), first),
+            (Last(second_index), sep @ (Separator(_) | Whitespace(_) | SeparatorOrWhitespace(_))),
+        ) => Err(((Only(first_index), first), (Only(second_index), sep))),
+        (
+            (First(first_index), sep @ (Separator(_) | Whitespace(_) | SeparatorOrWhitespace(_))),
+            (Last(second_index), second),
+        ) => Err(((Only(first_index), sep), (Only(second_index), second))),
+        (
+            (First(first_index), sep @ (Separator(_) | Whitespace(_) | SeparatorOrWhitespace(_))),
+            (Middle(second_index), second),
+        ) => Err(((Only(first_index), sep), (First(second_index), second))),
+        (
+            (Middle(first_index), first),
+            (Last(second_index), sep @ (Separator(_) | Whitespace(_) | SeparatorOrWhitespace(_))),
+        ) => Err(((Last(first_index), first), (Only(second_index), sep))),
+        _ => Err((fst, snd)),
     });
 
     // SAFETY: iter yields from the same string and items are adjacent.
@@ -241,7 +242,7 @@ pub fn token_position_indices(text: &str) -> impl Iterator<Item = (usize, Positi
 }
 
 #[inline]
-fn word_position_indices(text: &str) -> impl Iterator<Item = (usize, Position<&str>)> {
+fn word_position_indices(text: &str) -> impl Iterator<Item = (Position<usize>, &str)> {
     use unicode_segmentation::UnicodeSegmentation;
     use Position::{First, Last, Middle, Only};
 
@@ -250,14 +251,11 @@ fn word_position_indices(text: &str) -> impl Iterator<Item = (usize, Position<&s
             sentence
                 .split_word_bound_indices()
                 .with_position()
-                .map(move |item| {
-                    let (index, word) = match item {
-                        First((index, word)) => (index, First(word)),
-                        Middle((index, word)) => (index, Middle(word)),
-                        Last((index, word)) => (index, Last(word)),
-                        Only((index, word)) => (index, Only(word)),
-                    };
-                    (start + index, word)
+                .map(move |item| match item {
+                    First((index, word)) => (First(start + index), word),
+                    Middle((index, word)) => (Middle(start + index), word),
+                    Last((index, word)) => (Last(start + index), word),
+                    Only((index, word)) => (Only(start + index), word),
                 })
         })
 }
@@ -265,18 +263,8 @@ fn word_position_indices(text: &str) -> impl Iterator<Item = (usize, Position<&s
 #[inline]
 fn isolated_token_position_indices(
     text: &str,
-) -> impl Iterator<Item = (usize, Position<UnicodeToken>)> {
-    use Position::{First, Last, Middle, Only};
-
-    word_position_indices(text).map(|(index, item)| {
-        let item = match item {
-            First(word) => First(UnicodeToken::from(word)),
-            Middle(word) => Middle(UnicodeToken::from(word)),
-            Last(word) => Last(UnicodeToken::from(word)),
-            Only(word) => Only(UnicodeToken::from(word)),
-        };
-        (index, item)
-    })
+) -> impl Iterator<Item = (Position<usize>, UnicodeToken)> {
+    word_position_indices(text).map(|(index, word)| (index, UnicodeToken::from(word)))
 }
 
 #[cfg(test)]
@@ -294,31 +282,31 @@ mod tests {
         assert_eq!(
             sents,
             &[
-                (0, First("Mr")),
-                (2, Middle(".")),
-                (3, Last(" ")),
-                (4, First("Fox")),
-                (7, Middle(" ")),
-                (8, Middle("jumped")),
-                (14, Middle(".")),
-                (15, Last("  ")),
-                (17, First("[")),
-                (18, Middle(".")),
-                (19, Middle(".")),
-                (20, Middle(".")),
-                (21, Middle("]")),
-                (22, Last("  ")),
-                (24, First("The")),
-                (27, Middle(" ")),
-                (28, Middle("dog")),
-                (31, Middle(" ")),
-                (32, Middle("was")),
-                (35, Middle(" ")),
-                (36, Middle("too")),
-                (39, Middle(" ")),
-                (40, Middle("lazy")),
-                (44, Middle(".")),
-                (45, Last("  ")),
+                (First(0), "Mr"),
+                (Middle(2), "."),
+                (Last(3), " "),
+                (First(4), "Fox"),
+                (Middle(7), " "),
+                (Middle(8), "jumped"),
+                (Middle(14), "."),
+                (Last(15), "  "),
+                (First(17), "["),
+                (Middle(18), "."),
+                (Middle(19), "."),
+                (Middle(20), "."),
+                (Middle(21), "]"),
+                (Last(22), "  "),
+                (First(24), "The"),
+                (Middle(27), " "),
+                (Middle(28), "dog"),
+                (Middle(31), " "),
+                (Middle(32), "was"),
+                (Middle(35), " "),
+                (Middle(36), "too"),
+                (Middle(39), " "),
+                (Middle(40), "lazy"),
+                (Middle(44), "."),
+                (Last(45), "  "),
             ]
         );
     }
@@ -333,30 +321,30 @@ mod tests {
         assert_eq!(
             sents,
             &[
-                (0, First(Letter("Mr"))),
-                (2, Middle(Punctuation("."))),
-                (3, Last(Separator(" "))),
-                (4, First(Letter("Fox"))),
-                (7, Middle(Separator(" "))),
-                (8, Middle(Letter("jumped"))),
-                (14, Middle(Punctuation("."))),
-                (15, Last(Whitespace("\n"))),
-                (16, First(Whitespace("\t"))),
-                (17, Middle(Punctuation("["))),
-                (18, Middle(Punctuation("."))),
-                (19, Middle(Punctuation("."))),
-                (20, Middle(Punctuation("."))),
-                (21, Middle(Punctuation("]"))),
-                (22, Last(Whitespace("\n"))),
-                (23, First(Letter("The"))),
-                (26, Middle(Separator(" "))),
-                (27, Middle(Letter("dog"))),
-                (30, Middle(Separator(" "))),
-                (31, Middle(Letter("had"))),
-                (34, Middle(Separator(" "))),
-                (35, Middle(Symbol("$"))),
-                (36, Middle(Float("2.50"))),
-                (40, Last(Punctuation("."))),
+                (First(0), Letter("Mr")),
+                (Middle(2), Punctuation(".")),
+                (Last(3), Separator(" ")),
+                (First(4), Letter("Fox")),
+                (Middle(7), Separator(" ")),
+                (Middle(8), Letter("jumped")),
+                (Middle(14), Punctuation(".")),
+                (Last(15), Whitespace("\n")),
+                (First(16), Whitespace("\t")),
+                (Middle(17), Punctuation("[")),
+                (Middle(18), Punctuation(".")),
+                (Middle(19), Punctuation(".")),
+                (Middle(20), Punctuation(".")),
+                (Middle(21), Punctuation("]")),
+                (Last(22), Whitespace("\n")),
+                (First(23), Letter("The")),
+                (Middle(26), Separator(" ")),
+                (Middle(27), Letter("dog")),
+                (Middle(30), Separator(" ")),
+                (Middle(31), Letter("had")),
+                (Middle(34), Separator(" ")),
+                (Middle(35), Symbol("$")),
+                (Middle(36), Float("2.50")),
+                (Last(40), Punctuation(".")),
             ]
         );
     }
@@ -371,26 +359,26 @@ mod tests {
         assert_eq!(
             sents,
             &[
-                (0, First(Letter("Mr"))),
-                (2, Last(Punctuation("."))),
-                (3, Only(Separator("  "))),
-                (5, First(Letter("Fox"))),
-                (8, Middle(Separator("  "))),
-                (10, Middle(Letter("jumped"))),
-                (16, Last(Punctuation("."))),
-                (17, Only(SeparatorOrWhitespace(" \n \t "))),
-                (22, Only(Punctuation("[...]"))),
-                (27, Only(SeparatorOrWhitespace(" \n "))),
-                (30, First(Letter("The"))),
-                (33, Middle(Separator("  "))),
-                (35, Middle(Letter("dog"))),
-                (38, Middle(Separator("  "))),
-                (40, Middle(Letter("had"))),
-                (43, Middle(Separator("  "))),
-                (45, Middle(Symbol("$"))),
-                (46, Middle(Float("2.50"))),
-                (50, Last(Punctuation("."))),
-                (51, Only(Separator(" "))),
+                (First(0), Letter("Mr")),
+                (Last(2), Punctuation(".")),
+                (Only(3), Separator("  ")),
+                (First(5), Letter("Fox")),
+                (Middle(8), Separator("  ")),
+                (Middle(10), Letter("jumped")),
+                (Last(16), Punctuation(".")),
+                (Only(17), SeparatorOrWhitespace(" \n \t ")),
+                (Only(22), Punctuation("[...]")),
+                (Only(27), SeparatorOrWhitespace(" \n ")),
+                (First(30), Letter("The")),
+                (Middle(33), Separator("  ")),
+                (Middle(35), Letter("dog")),
+                (Middle(38), Separator("  ")),
+                (Middle(40), Letter("had")),
+                (Middle(43), Separator("  ")),
+                (Middle(45), Symbol("$")),
+                (Middle(46), Float("2.50")),
+                (Last(50), Punctuation(".")),
+                (Only(51), Separator(" ")),
             ]
         );
     }
