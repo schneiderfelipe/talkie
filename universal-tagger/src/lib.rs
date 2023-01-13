@@ -1,4 +1,6 @@
 //! A language-agnostic natural-language tagger written in Rust.
+//!
+//! This is in early stages of development.
 
 mod language_detection;
 mod unicode_segmentation;
