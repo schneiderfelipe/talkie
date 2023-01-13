@@ -19,6 +19,7 @@ cfg-if = { version = "1.0.0", default-features = false }
 log = { version = "0.4.17", default-features = false }
 strum = { version = "0.24.1", default-features = false, features = ["derive"] }
 itertools = { version = "0.10.5", default-features = false }
+unicode_categories = { version = "0.1.1", default-features = false }
 
 [features]
 default = ["whatlang", "arabic", "bengali", "english", "esperanto", "french", "german", "hindi", "indonesian", "italian", "japanese", "mandarin", "portuguese", "punjabi", "russian", "spanish", "turkish", "urdu"]
@@ -40,8 +41,8 @@ spanish = ["lingua?/spanish"]
 turkish = ["lingua?/turkish"]
 urdu = ["lingua?/urdu"]
 
-
 [dev-dependencies]
+pretty_assertions = { version = "1.3.0", default-features = false, features = ["alloc"] }
 textarea = { path = "../textarea" }
 
 [package.metadata.workspaces]
