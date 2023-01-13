@@ -136,7 +136,10 @@ impl<'text> UnicodeToken<'text> {
 
     /// Coalesce two tokens.
     ///
-    /// They have to be from the same string, be of the same kind, and be next to each other in the string.
+    /// # Safety
+    ///
+    /// The pointers have to be from the same string and be next to each other
+    /// in the original string.
     #[inline]
     unsafe fn coalesce_with(self, other: Self) -> Self {
         use std::{slice, str};
@@ -146,15 +149,24 @@ impl<'text> UnicodeToken<'text> {
         let ptr = first.as_ptr();
         let len = first.len() + second.len();
 
-        let slice = slice::from_raw_parts(ptr, len);
-        let utf8 = str::from_utf8_unchecked(slice);
+        let utf8 = unsafe {
+            let slice = slice::from_raw_parts(ptr, len);
+            str::from_utf8_unchecked(slice)
+        };
 
         utf8.into()
     }
 }
 
+/// Coalesce adjacent tokens.
+///
+/// # Safety
+///
+/// The whole iterator should yield pointers from the same string,
+/// and adjacent yielded items should be next to each other
+/// in the original string.
 #[inline]
-fn coalesce_tokens<'text, I>(
+unsafe fn coalesce_tokens<'text, I>(
     iter: I,
 ) -> impl Iterator<Item = (usize, Position<UnicodeToken<'text>>)>
 where
@@ -195,6 +207,40 @@ where
 }
 
 #[inline]
+pub fn token_position_indices(text: &str) -> impl Iterator<Item = (usize, Position<UnicodeToken>)> {
+    use Position::{First, Last, Middle, Only};
+    use UnicodeToken::{Separator, SeparatorOrWhitespace, Whitespace};
+
+    let iter = isolated_token_position_indices(text);
+    // SAFETY: iter yields from the same string and items are adjacent.
+    let iter = unsafe { coalesce_tokens(iter) };
+    let iter = iter.coalesce(|fst @ (first_index, first), snd @ (second_index, second)| {
+        match (first, second) {
+            (
+                First(first),
+                Last(sep @ (Separator(_) | Whitespace(_) | SeparatorOrWhitespace(_))),
+            ) => Err(((first_index, Only(first)), (second_index, Only(sep)))),
+            (
+                First(sep @ (Separator(_) | Whitespace(_) | SeparatorOrWhitespace(_))),
+                Last(second),
+            ) => Err(((first_index, Only(sep)), (second_index, Only(second)))),
+            (
+                First(sep @ (Separator(_) | Whitespace(_) | SeparatorOrWhitespace(_))),
+                Middle(second),
+            ) => Err(((first_index, Only(sep)), (second_index, First(second)))),
+            (
+                Middle(first),
+                Last(sep @ (Separator(_) | Whitespace(_) | SeparatorOrWhitespace(_))),
+            ) => Err(((first_index, Last(first)), (second_index, Only(sep)))),
+            _ => Err((fst, snd)),
+        }
+    });
+
+    // SAFETY: iter yields from the same string and items are adjacent.
+    unsafe { coalesce_tokens(iter) }
+}
+
+#[inline]
 fn word_position_indices(text: &str) -> impl Iterator<Item = (usize, Position<&str>)> {
     use unicode_segmentation::UnicodeSegmentation;
     use Position::{First, Last, Middle, Only};
@@ -231,36 +277,6 @@ fn isolated_token_position_indices(
         };
         (index, item)
     })
-}
-
-#[inline]
-pub fn token_position_indices(text: &str) -> impl Iterator<Item = (usize, Position<UnicodeToken>)> {
-    use Position::{First, Last, Middle, Only};
-    use UnicodeToken::{Separator, SeparatorOrWhitespace, Whitespace};
-
-    let iter = coalesce_tokens(isolated_token_position_indices(text)).coalesce(
-        |fst @ (first_index, first), snd @ (second_index, second)| match (first, second) {
-            (
-                First(first),
-                Last(sep @ (Separator(_) | Whitespace(_) | SeparatorOrWhitespace(_))),
-            ) => Err(((first_index, Only(first)), (second_index, Only(sep)))),
-            (
-                First(sep @ (Separator(_) | Whitespace(_) | SeparatorOrWhitespace(_))),
-                Last(second),
-            ) => Err(((first_index, Only(sep)), (second_index, Only(second)))),
-            (
-                First(sep @ (Separator(_) | Whitespace(_) | SeparatorOrWhitespace(_))),
-                Middle(second),
-            ) => Err(((first_index, Only(sep)), (second_index, First(second)))),
-            (
-                Middle(first),
-                Last(sep @ (Separator(_) | Whitespace(_) | SeparatorOrWhitespace(_))),
-            ) => Err(((first_index, Last(first)), (second_index, Only(sep)))),
-            _ => Err((fst, snd)),
-        },
-    );
-
-    coalesce_tokens(iter)
 }
 
 #[cfg(test)]
