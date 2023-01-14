@@ -1,7 +1,7 @@
 use std::error::Error;
 
 use textarea::Textarea;
-use universal_tagger::{token_position_indices, LanguageDetector};
+use universal_tagger::{LanguageDetector, Tagger};
 
 fn main() -> Result<(), Box<dyn Error>> {
     loop {
@@ -11,9 +11,15 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
 
         let lang = LanguageDetector::default().detect(&text);
-        println!("Language: {lang:?}");
+        let lang = if let Some(lang) = lang {
+            println!("Language is {lang:?}");
+            lang
+        } else {
+            println!("Unknown language");
+            continue;
+        };
 
-        let tokens: Vec<_> = token_position_indices(&text).collect();
+        let tokens: Vec<_> = Tagger::new(lang).tag(&text).collect();
         println!("{tokens:#?}");
     }
     Ok(())

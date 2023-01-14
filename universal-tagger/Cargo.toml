@@ -14,15 +14,17 @@ lingua = { version = "1.4.0", default-features = false, optional = true }
 whatlang = { version = "0.16.2", default-features = false, optional = true }
 
 unicode-segmentation = { version = "1.10.0", default-features = false }
-
-cfg-if = { version = "1.0.0", default-features = false }
-log = { version = "0.4.17", default-features = false }
-strum = { version = "0.24.1", default-features = false, features = ["derive"] }
-itertools = { version = "0.10.5", default-features = false }
 unicode_categories = { version = "0.1.1", default-features = false }
 
+cfg-if = { version = "1.0.0", default-features = false }
+itertools = { version = "0.10.5", default-features = false }
+log = { version = "0.4.17", default-features = false }
+strum = { version = "0.24.1", default-features = false, features = ["derive"] }
+stop-words = { version = "0.7.0", default-features = false, features = ["iso"] }
+unicase = { version = "2.6.0", default-features = false }
+
 [features]
-default = ["whatlang", "arabic", "bengali", "english", "esperanto", "french", "german", "hindi", "indonesian", "italian", "japanese", "mandarin", "portuguese", "punjabi", "russian", "spanish", "turkish", "urdu"]
+default = ["whatlang", "arabic", "bengali", "english", "esperanto", "french", "german", "hindi", "indonesian", "italian", "japanese", "mandarin", "portuguese", "russian", "spanish", "turkish", "urdu"]
 arabic = ["lingua?/arabic"]
 bengali = ["lingua?/bengali"]
 english = ["lingua?/english"]
@@ -35,14 +37,15 @@ italian = ["lingua?/italian"]
 japanese = ["lingua?/japanese"]
 mandarin = ["lingua?/chinese"]
 portuguese = ["lingua?/portuguese"]
-punjabi = ["lingua?/punjabi"]
 russian = ["lingua?/russian"]
 spanish = ["lingua?/spanish"]
 turkish = ["lingua?/turkish"]
 urdu = ["lingua?/urdu"]
 
 [dev-dependencies]
-pretty_assertions = { version = "1.3.0", default-features = false, features = ["alloc"] }
+pretty_assertions = { version = "1.3.0", default-features = false, features = [
+  "alloc",
+] }
 textarea = { path = "../textarea" }
 
 [package.metadata.workspaces]

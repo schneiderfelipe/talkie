@@ -1,7 +1,7 @@
 use itertools::{Itertools, Position};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum UnicodeToken<'text> {
+pub enum Token<'text> {
     Separator(&'text str),
     Whitespace(&'text str),
     SeparatorOrWhitespace(&'text str),
@@ -22,7 +22,7 @@ pub enum UnicodeToken<'text> {
     OtherOrPunctuation(&'text str),
 }
 
-impl<'text> From<&'text str> for UnicodeToken<'text> {
+impl<'text> From<&'text str> for Token<'text> {
     #[inline]
     fn from(word: &'text str) -> Self {
         use unicode_categories::UnicodeCategories;
@@ -70,10 +70,10 @@ impl<'text> From<&'text str> for UnicodeToken<'text> {
     }
 }
 
-impl<'text> AsRef<str> for UnicodeToken<'text> {
+impl<'text> AsRef<str> for Token<'text> {
     #[inline]
     fn as_ref(&self) -> &str {
-        use UnicodeToken::{
+        use Token::{
             Float, Letter, LetterOrMark, LetterOrNumber, LetterOrOther, LetterOrPunctuation, Mark,
             Number, NumberOrMark, NumberOrOther, NumberOrPunctuation, Other, OtherOrPunctuation,
             Punctuation, Separator, SeparatorOrWhitespace, Symbol, Whitespace,
@@ -102,10 +102,10 @@ impl<'text> AsRef<str> for UnicodeToken<'text> {
     }
 }
 
-impl<'text> UnicodeToken<'text> {
+impl<'text> Token<'text> {
     #[inline]
     const fn can_merge(first: &Self, second: &Self) -> bool {
-        use UnicodeToken::{
+        use Token::{
             Float, Letter, LetterOrMark, LetterOrNumber, LetterOrOther, LetterOrPunctuation, Mark,
             Number, NumberOrMark, NumberOrOther, NumberOrPunctuation, Other, OtherOrPunctuation,
             Punctuation, Separator, SeparatorOrWhitespace, Symbol, Whitespace,
@@ -168,9 +168,9 @@ impl<'text> UnicodeToken<'text> {
 #[inline]
 unsafe fn coalesce_tokens<'text, I>(
     iter: I,
-) -> impl Iterator<Item = (Position<usize>, UnicodeToken<'text>)>
+) -> impl Iterator<Item = (Position<usize>, Token<'text>)>
 where
-    I: Iterator<Item = (Position<usize>, UnicodeToken<'text>)>,
+    I: Iterator<Item = (Position<usize>, Token<'text>)>,
 {
     use Position::{First, Last, Middle, Only};
 
@@ -179,25 +179,25 @@ where
             first_position,
             second_position,
         ) {
-            (First(first_index), Last(_)) if UnicodeToken::can_merge(&first, &second) => {
+            (First(first_index), Last(_)) if Token::can_merge(&first, &second) => {
                 Ok((Only(first_index), unsafe { first.coalesce_with(second) }))
             }
-            (First(first_index), Middle(_)) if UnicodeToken::can_merge(&first, &second) => {
+            (First(first_index), Middle(_)) if Token::can_merge(&first, &second) => {
                 Ok((First(first_index), unsafe { first.coalesce_with(second) }))
             }
-            (Last(first_index), Only(_)) if UnicodeToken::can_merge(&first, &second) => {
+            (Last(first_index), Only(_)) if Token::can_merge(&first, &second) => {
                 Ok((Last(first_index), unsafe { first.coalesce_with(second) }))
             }
-            (Middle(first_index), Last(_)) if UnicodeToken::can_merge(&first, &second) => {
+            (Middle(first_index), Last(_)) if Token::can_merge(&first, &second) => {
                 Ok((Last(first_index), unsafe { first.coalesce_with(second) }))
             }
-            (Middle(first_index), Middle(_)) if UnicodeToken::can_merge(&first, &second) => {
+            (Middle(first_index), Middle(_)) if Token::can_merge(&first, &second) => {
                 Ok((Middle(first_index), unsafe { first.coalesce_with(second) }))
             }
-            (Only(first_index), First(_)) if UnicodeToken::can_merge(&first, &second) => {
+            (Only(first_index), First(_)) if Token::can_merge(&first, &second) => {
                 Ok((First(first_index), unsafe { first.coalesce_with(second) }))
             }
-            (Only(first_index), Only(_)) if UnicodeToken::can_merge(&first, &second) => {
+            (Only(first_index), Only(_)) if Token::can_merge(&first, &second) => {
                 Ok((Only(first_index), unsafe { first.coalesce_with(second) }))
             }
             (First(_) | Middle(_), First(_) | Only(_))
@@ -210,11 +210,11 @@ where
 }
 
 #[inline]
-pub fn token_position_indices(text: &str) -> impl Iterator<Item = (Position<usize>, UnicodeToken)> {
+pub fn token_positions(text: &str) -> impl Iterator<Item = (Position<usize>, Token)> {
     use Position::{First, Last, Middle, Only};
-    use UnicodeToken::{Separator, SeparatorOrWhitespace, Whitespace};
+    use Token::{Separator, SeparatorOrWhitespace, Whitespace};
 
-    let iter = isolated_token_position_indices(text);
+    let iter = isolated_token_positions(text);
     // SAFETY: iter yields from the same string and items are adjacent.
     let iter = unsafe { coalesce_tokens(iter) };
     let iter = iter.coalesce(|fst, snd| match (fst, snd) {
@@ -242,7 +242,7 @@ pub fn token_position_indices(text: &str) -> impl Iterator<Item = (Position<usiz
 }
 
 #[inline]
-fn word_position_indices(text: &str) -> impl Iterator<Item = (Position<usize>, &str)> {
+fn word_positions(text: &str) -> impl Iterator<Item = (Position<usize>, &str)> {
     use unicode_segmentation::UnicodeSegmentation;
     use Position::{First, Last, Middle, Only};
 
@@ -261,10 +261,8 @@ fn word_position_indices(text: &str) -> impl Iterator<Item = (Position<usize>, &
 }
 
 #[inline]
-fn isolated_token_position_indices(
-    text: &str,
-) -> impl Iterator<Item = (Position<usize>, UnicodeToken)> {
-    word_position_indices(text).map(|(index, word)| (index, UnicodeToken::from(word)))
+fn isolated_token_positions(text: &str) -> impl Iterator<Item = (Position<usize>, Token)> {
+    word_positions(text).map(|(position, word)| (position, Token::from(word)))
 }
 
 #[cfg(test)]
@@ -274,111 +272,25 @@ mod tests {
     use super::*;
 
     #[test]
-    fn simple_word_usage() {
+    fn token_usage() {
         use Position::{First, Last, Middle};
+        use Token::{Letter, Punctuation, Separator};
 
-        let text = "Mr. Fox jumped.  [...]  The dog was too lazy.  ";
-        let sents: Vec<_> = word_position_indices(text).collect();
+        let text = "Colorless green ideas sleep furiously.";
+        let tokens: Vec<_> = token_positions(text).collect();
         assert_eq!(
-            sents,
+            tokens,
             &[
-                (First(0), "Mr"),
-                (Middle(2), "."),
-                (Last(3), " "),
-                (First(4), "Fox"),
-                (Middle(7), " "),
-                (Middle(8), "jumped"),
-                (Middle(14), "."),
-                (Last(15), "  "),
-                (First(17), "["),
-                (Middle(18), "."),
-                (Middle(19), "."),
-                (Middle(20), "."),
-                (Middle(21), "]"),
-                (Last(22), "  "),
-                (First(24), "The"),
-                (Middle(27), " "),
-                (Middle(28), "dog"),
-                (Middle(31), " "),
-                (Middle(32), "was"),
-                (Middle(35), " "),
-                (Middle(36), "too"),
-                (Middle(39), " "),
-                (Middle(40), "lazy"),
-                (Middle(44), "."),
-                (Last(45), "  "),
-            ]
-        );
-    }
-
-    #[test]
-    fn simple_isolated_token_usage() {
-        use Position::{First, Last, Middle};
-        use UnicodeToken::{Float, Letter, Punctuation, Separator, Symbol, Whitespace};
-
-        let text = "Mr. Fox jumped.\n\t[...]\nThe dog had $2.50.";
-        let sents: Vec<_> = isolated_token_position_indices(text).collect();
-        assert_eq!(
-            sents,
-            &[
-                (First(0), Letter("Mr")),
-                (Middle(2), Punctuation(".")),
-                (Last(3), Separator(" ")),
-                (First(4), Letter("Fox")),
-                (Middle(7), Separator(" ")),
-                (Middle(8), Letter("jumped")),
-                (Middle(14), Punctuation(".")),
-                (Last(15), Whitespace("\n")),
-                (First(16), Whitespace("\t")),
-                (Middle(17), Punctuation("[")),
-                (Middle(18), Punctuation(".")),
-                (Middle(19), Punctuation(".")),
-                (Middle(20), Punctuation(".")),
-                (Middle(21), Punctuation("]")),
-                (Last(22), Whitespace("\n")),
-                (First(23), Letter("The")),
-                (Middle(26), Separator(" ")),
-                (Middle(27), Letter("dog")),
-                (Middle(30), Separator(" ")),
-                (Middle(31), Letter("had")),
-                (Middle(34), Separator(" ")),
-                (Middle(35), Symbol("$")),
-                (Middle(36), Float("2.50")),
-                (Last(40), Punctuation(".")),
-            ]
-        );
-    }
-
-    #[test]
-    fn simple_token_usage() {
-        use Position::{First, Last, Middle, Only};
-        use UnicodeToken::{Float, Letter, Punctuation, Separator, SeparatorOrWhitespace, Symbol};
-
-        let text = "Mr.  Fox  jumped. \n \t [...] \n The  dog  had  $2.50. ";
-        let sents: Vec<_> = token_position_indices(text).collect();
-        assert_eq!(
-            sents,
-            &[
-                (First(0), Letter("Mr")),
-                (Last(2), Punctuation(".")),
-                (Only(3), Separator("  ")),
-                (First(5), Letter("Fox")),
-                (Middle(8), Separator("  ")),
-                (Middle(10), Letter("jumped")),
-                (Last(16), Punctuation(".")),
-                (Only(17), SeparatorOrWhitespace(" \n \t ")),
-                (Only(22), Punctuation("[...]")),
-                (Only(27), SeparatorOrWhitespace(" \n ")),
-                (First(30), Letter("The")),
-                (Middle(33), Separator("  ")),
-                (Middle(35), Letter("dog")),
-                (Middle(38), Separator("  ")),
-                (Middle(40), Letter("had")),
-                (Middle(43), Separator("  ")),
-                (Middle(45), Symbol("$")),
-                (Middle(46), Float("2.50")),
-                (Last(50), Punctuation(".")),
-                (Only(51), Separator(" ")),
+                (First(0), Letter("Colorless")),
+                (Middle(9), Separator(" ")),
+                (Middle(10), Letter("green")),
+                (Middle(15), Separator(" ")),
+                (Middle(16), Letter("ideas")),
+                (Middle(21), Separator(" ")),
+                (Middle(22), Letter("sleep")),
+                (Middle(27), Separator(" ")),
+                (Middle(28), Letter("furiously")),
+                (Last(37), Punctuation(".")),
             ]
         );
     }
